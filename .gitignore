@@ -1,0 +1,26 @@
+# Environment & Secrets
+.env
+*.env.local
+
+# Virtual Environment
+.venv/
+venv/
+ENV/
+env/
+
+# Python Cache
+__pycache__/
+*.py[cod]
+*$py.class
+*.pytest_cache/
+
+# Runtime Workspaces & Temp Uploads
+workspace/
+temp_uploads/
+*.log
+
+# IDE & OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db

@@ -44,7 +44,7 @@
   - Automatically utilizes headless LibreOffice recalculation when available on `PATH`, and falls back to regex arithmetic as a safety net. Never crashes on complex or unknown formulas.
 - **Post-Write Verification**: Re-reads affected cell ranges after every write to verify correctness.
 - **Large File Optimization & Context Management**: Samples 50k+ row datasets, caps LLM tool output history at ~4,000 characters to conserve tokens, and enforces bounded conversation history without splitting tool calls.
-- **Flexible LLM Provider Support**: Compatible with Google **Gemini** (`gemini-2.5-flash`), **OpenAI** (`gpt-4o-mini`), **Anthropic** (`claude-3-5-haiku-20241022`), and an offline **Mock/Demo mode** for evaluation without API keys.
+- **Flexible LLM Provider Support**: Compatible with Google **Gemini** (`gemini-3.8-flash`), **OpenAI** (`gpt-6-luna`), **Anthropic** (`claude-haiku-5-5`), and an offline **Mock/Demo mode** for evaluation without API keys.
 - **Dual Interfaces**: Interactive **Streamlit Web UI** and terminal **CLI REPL**.
 
 ---

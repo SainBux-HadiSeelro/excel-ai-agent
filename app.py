@@ -304,7 +304,7 @@ with st.sidebar:
 
     default_models = {
         "Gemini": DEFAULT_GEMINI_MODEL,
-        "OpenAI": "gpt-4o-mini",
+        "OpenAI": "gpt-6-luna",
         "Anthropic": "claude-haiku-5-5",
         "Offline Demo (Mock)": "mock-model"
     }

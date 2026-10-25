@@ -1,8 +1,8 @@
 """
 Multi-provider LLM abstraction for Excel AI Agent.
 Supports:
-- OpenAI (gpt-4o, gpt-4o-mini, etc.)
-- Anthropic (claude-haiku-5-5, claude-3-5-sonnet, etc.)
+- OpenAI (gpt-6-luna, gpt-4o, etc.)
+- Anthropic (claude-haiku-5-5, etc.)
 - Google Gemini (gemini-3.8-flash, gemini-2.5-flash, etc.)
 - Mock / Test Provider (for offline testing)
 """
@@ -101,7 +101,7 @@ class OpenAIProvider(BaseLLMProvider):
 
     def __init__(self, api_key: Optional[str] = None, model: Optional[str] = None):
         key = api_key or os.getenv("OPENAI_API_KEY", "")
-        m = model or os.getenv("OPENAI_MODEL", "gpt-4o-mini")
+        m = model or os.getenv("OPENAI_MODEL", "gpt-6-luna")
         super().__init__(api_key=key, model=m)
         if not self.api_key:
             raise ValueError("OpenAI API key not found. Set OPENAI_API_KEY in .env or pass api_key.")
@@ -120,12 +120,17 @@ class OpenAIProvider(BaseLLMProvider):
             if tools:
                 formatted_tools = [{"type": "function", "function": t} for t in tools]
 
-            response = client.chat.completions.create(
-                model=self.model,
-                messages=formatted_messages,
-                tools=formatted_tools,
-                temperature=temperature
-            )
+            call_kwargs = {
+                "model": self.model,
+                "messages": formatted_messages,
+                "tools": formatted_tools
+            }
+            if "gpt-6" in self.model.lower():
+                call_kwargs["reasoning_effort"] = "none"
+            else:
+                call_kwargs["temperature"] = temperature
+
+            response = client.chat.completions.create(**call_kwargs)
             msg = response.choices[0].message
             content = msg.content
             tool_calls = []
@@ -153,8 +158,12 @@ class OpenAIProvider(BaseLLMProvider):
         payload = {
             "model": self.model,
             "messages": messages,
-            "temperature": temperature
         }
+        if "gpt-6" in self.model.lower():
+            payload["reasoning_effort"] = "none"
+        else:
+            payload["temperature"] = temperature
+
         if tools:
             payload["tools"] = [{"type": "function", "function": t} for t in tools]
 

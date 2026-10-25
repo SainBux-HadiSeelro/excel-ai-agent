@@ -136,10 +136,9 @@ class WorkspaceManager:
             shutil.copy2(src, target_file)
             self.current_file = target_file
 
-        # Create initial baseline snapshot (v0)
+        # Initialize clean history
         self._history_stack.clear()
         self._version_counter = 0
-        self._create_snapshot("Initial upload")
         return str(self.current_file)
 
     def init_blank(self, filename: str = "workbook.xlsx") -> str:
@@ -152,7 +151,6 @@ class WorkspaceManager:
         self.current_file = target_file
         self._history_stack.clear()
         self._version_counter = 0
-        self._create_snapshot("Initial blank workbook")
         return str(self.current_file)
 
     def _create_snapshot(self, description: str = "") -> Path:
@@ -175,16 +173,14 @@ class WorkspaceManager:
 
     def undo(self) -> Dict[str, Any]:
         """Reverts the current workbook to the previous snapshot in the history stack."""
-        if len(self._history_stack) <= 1:
+        if not self._history_stack:
             return {
                 "success": False,
                 "message": "No previous changes to undo. Already at the initial version."
             }
 
-        # Remove the latest state
-        current_state = self._history_stack.pop()
-        # Restore the previous state
-        target_state = self._history_stack[-1]
+        # Restore the state immediately prior to the latest mutation
+        target_state = self._history_stack.pop()
 
         if not target_state.exists():
             return {
@@ -196,12 +192,12 @@ class WorkspaceManager:
         return {
             "success": True,
             "message": f"Successfully reverted to previous snapshot ({target_state.stem}).",
-            "remaining_undo_steps": len(self._history_stack) - 1
+            "remaining_undo_steps": len(self._history_stack)
         }
 
     def get_history_count(self) -> int:
         """Returns the number of undoable actions available."""
-        return max(0, len(self._history_stack) - 1)
+        return len(self._history_stack)
 
     def get_current_file_path(self) -> str:
         """Returns the absolute path of the current working copy."""

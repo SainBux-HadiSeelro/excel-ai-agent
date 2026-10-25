@@ -298,3 +298,19 @@ def test_temp_path_evaluations_leave_cache_unchanged():
     # Cache must still be empty!
     assert len(workspace_manager._MODULE_FORMULA_CACHE) == 0
 
+
+def test_oversize_workbook_with_pure_formulas_reported_oversize(tmp_path):
+    import workspace_manager
+    p = tmp_path / "oversize_formulas.xlsx"
+
+    wb = openpyxl.Workbook()
+    ws = wb.active
+    # Write 201 rows x 101 cols = 20,301 formula cells without cached values
+    for r in range(1, 202):
+        for c in range(1, 102):
+            ws.cell(row=r, column=c, value=f"=A1+{r}")
+    wb.save(p)
+
+    is_over = workspace_manager.is_file_oversize(p)
+    assert is_over is True
+

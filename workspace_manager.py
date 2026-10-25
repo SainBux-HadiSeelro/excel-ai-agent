@@ -104,7 +104,7 @@ def is_file_oversize(file_path: str | Path, limit: Optional[int] = None) -> bool
         p = Path(file_path).resolve()
         if not p.exists():
             return False
-        wb = openpyxl.load_workbook(p, data_only=True, read_only=True)
+        wb = openpyxl.load_workbook(p, data_only=False, read_only=True)
         count = count_non_empty_cells(wb, limit=limit)
         wb.close()
         is_over = count > limit

@@ -15,7 +15,7 @@ import json
 from dataclasses import dataclass, field
 from typing import Dict, Any, List, Optional, Callable
 from workspace_manager import WorkspaceManager
-from llm import BaseLLMProvider, ToolCall, LLMResponse, get_llm_provider
+from llm import BaseLLMProvider, ToolCall, LLMResponse, get_llm_provider, is_model_error
 from tools.registry import TOOL_DEFINITIONS, execute_tool
 
 SYSTEM_PROMPT = """You are an expert, production-grade Excel AI Agent.
@@ -186,7 +186,7 @@ class ExcelAgent:
                 )
             except Exception as e:
                 err_msg = str(e)
-                if any(k in err_msg.lower() for k in ["not found", "model_not_found", "does not exist", "404", "unknown model", "retired"]):
+                if is_model_error(err_msg):
                     display_msg = f"Model Error: The model '{getattr(self.provider, 'model', 'unknown')}' was not found or has been retired. Please change the Model Name field in the sidebar or environment settings. (Details: {err_msg})"
                 else:
                     display_msg = f"LLM Error: {err_msg}"

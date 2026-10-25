@@ -26,6 +26,23 @@ load_dotenv()
 DEFAULT_GEMINI_MODEL = os.getenv("GEMINI_MODEL", "gemini-3.8-flash")
 FALLBACK_GEMINI_MODEL = os.getenv("GEMINI_FALLBACK_MODEL", "gemini-2.5-flash")
 
+MODEL_NOT_FOUND_KEYWORDS = [
+    "not found",
+    "model_not_found",
+    "does not exist",
+    "404",
+    "unknown model",
+    "retired"
+]
+
+
+def is_model_error(text: Optional[str]) -> bool:
+    """Detects whether an error message indicates a missing, unknown, or retired model."""
+    if not text:
+        return False
+    lower = str(text).lower()
+    return any(k in lower for k in MODEL_NOT_FOUND_KEYWORDS)
+
 
 @dataclass
 class ToolCall:

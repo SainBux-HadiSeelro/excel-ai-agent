@@ -13,7 +13,7 @@ import html
 import time
 import uuid
 from pathlib import Path
-from typing import List
+from typing import List, Optional, Tuple
 import streamlit as st
 import pandas as pd
 from dotenv import load_dotenv
@@ -22,7 +22,7 @@ from dotenv import load_dotenv
 sys.path.insert(0, str(Path(__file__).parent.resolve()))
 
 from workspace_manager import WorkspaceManager, cleanup_stale_sessions, load_sheet_dataframe, safe_upload_name
-from llm import get_llm_provider, GeminiProvider, OpenAIProvider, AnthropicProvider, DEFAULT_GEMINI_MODEL
+from llm import get_llm_provider, GeminiProvider, OpenAIProvider, AnthropicProvider, DEFAULT_GEMINI_MODEL, is_model_error
 from agent import ExcelAgent, ToolExecutionTrace
 
 load_dotenv()
@@ -391,7 +391,7 @@ with st.sidebar:
                 st.session_state.agent_config = current_config
             except Exception as e:
                 err_str = str(e)
-                if any(k in err_str.lower() for k in ["not found", "model_not_found", "does not exist", "404", "unknown model", "retired"]):
+                if is_model_error(err_str):
                     st.sidebar.error(f"Provider Error: {err_str}\n\n💡 **Tip:** Model not found or retired. Please update the **Model Name** field above.")
                 else:
                     st.sidebar.error(f"Provider Error: {err_str}")
@@ -623,7 +623,7 @@ with tab_chat:
                     # Render final response
                     if not agent_res.success and agent_res.error:
                         err_full = (agent_res.final_response or "") + " " + str(agent_res.error)
-                        if any(k in err_full.lower() for k in ["not found", "model_not_found", "does not exist", "404", "unknown model", "retired"]):
+                        if is_model_error(err_full):
                             st.error(f"❌ {agent_res.final_response}\n\n💡 **Tip:** Model not found or retired. Please update the **Model Name** field in the sidebar.")
                         else:
                             st.error(f"❌ {agent_res.final_response}")

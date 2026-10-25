@@ -233,4 +233,20 @@ def test_agent_history_trimming_preserves_current_run_user_message(sample_manage
     assert non_system_roles[0] != "tool"
 
 
+def test_is_model_error_helper():
+    from llm import is_model_error
+
+    assert is_model_error("Model 'gpt-x' not found") is True
+    assert is_model_error("Resource 404: Not Found") is True
+    assert is_model_error("model_not_found error code") is True
+    assert is_model_error("The specified model does not exist") is True
+    assert is_model_error("This model was retired on 2026-02-19") is True
+    assert is_model_error("unknown model requested") is True
+
+    assert is_model_error("Rate limit exceeded") is False
+    assert is_model_error("Invalid API key") is False
+    assert is_model_error("") is False
+    assert is_model_error(None) is False
+
+
 

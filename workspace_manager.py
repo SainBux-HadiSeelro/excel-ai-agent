@@ -538,6 +538,27 @@ class WorkspaceManager:
         return wb.sheetnames
 
 
+def _get_newest_mtime(folder: Path) -> float:
+    """Finds the newest mtime recursively inside folder, including the folder itself."""
+    try:
+        newest = folder.stat().st_mtime
+    except Exception:
+        newest = 0.0
+
+    try:
+        for p in folder.rglob("*"):
+            try:
+                t = p.stat().st_mtime
+                if t > newest:
+                    newest = t
+            except Exception:
+                pass
+    except Exception:
+        pass
+
+    return newest
+
+
 def cleanup_stale_sessions(
     workspace_root: Optional[str | Path] = None,
     temp_uploads_root: Optional[str | Path] = None,
@@ -545,6 +566,7 @@ def cleanup_stale_sessions(
     active_session_ids: Optional[List[str]] = None
 ) -> Dict[str, int]:
     """Removes session folders and temp upload directories older than max_age_hours (default 24h).
+    Decides staleness by the newest mtime found inside the folder (recursively, including history/ and current.xlsx).
     Ensures active_session_ids are never touched. Configurable via EXCEL_SESSION_MAX_AGE_HOURS env var.
     """
     if max_age_hours is None:
@@ -573,8 +595,8 @@ def cleanup_stale_sessions(
             if session_dir.name in active_set:
                 continue
             try:
-                mtime = session_dir.stat().st_mtime
-                if (now - mtime) > max_age_seconds:
+                newest_mtime = _get_newest_mtime(session_dir)
+                if (now - newest_mtime) > max_age_seconds:
                     shutil.rmtree(session_dir, ignore_errors=True)
                     removed_workspaces += 1
             except Exception:
@@ -586,8 +608,8 @@ def cleanup_stale_sessions(
             if item.name in active_set:
                 continue
             try:
-                mtime = item.stat().st_mtime
-                if (now - mtime) > max_age_seconds:
+                newest_mtime = _get_newest_mtime(item) if item.is_dir() else item.stat().st_mtime
+                if (now - newest_mtime) > max_age_seconds:
                     if item.is_dir():
                         shutil.rmtree(item, ignore_errors=True)
                     else:

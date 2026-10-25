@@ -80,7 +80,7 @@ def read_range(
             if not isinstance(cells, tuple):
                 if not show_formulas and raw_ws:
                     raw_cell = raw_ws[cells.coordinate]
-                    val = evaluate_formula_cell(raw_cell.value, cells.value, raw_ws, ws)
+                    val = evaluate_formula_cell(raw_cell.value, cells.value, raw_ws, ws, cell_coord=cells.coordinate)
                 else:
                     val = cells.value if cells.value is not None else ""
                 return {
@@ -95,7 +95,7 @@ def read_range(
                 for c in row:
                     if not show_formulas and raw_ws:
                         raw_c = raw_ws.cell(row=c.row, column=c.column)
-                        row_vals.append(evaluate_formula_cell(raw_c.value, c.value, raw_ws, ws))
+                        row_vals.append(evaluate_formula_cell(raw_c.value, c.value, raw_ws, ws, cell_coord=raw_c.coordinate))
                     else:
                         row_vals.append(c.value if c.value is not None else "")
                 extracted_rows.append(row_vals)
@@ -112,7 +112,8 @@ def read_range(
                 val = ws.cell(row=r, column=c).value
                 if not show_formulas and raw_ws:
                     raw_val = raw_ws.cell(row=r, column=c).value
-                    row_data.append(evaluate_formula_cell(raw_val, val, raw_ws, ws))
+                    coord = f"{get_column_letter(c)}{r}"
+                    row_data.append(evaluate_formula_cell(raw_val, val, raw_ws, ws, cell_coord=coord))
                 else:
                     row_data.append(val if val is not None else "")
             extracted_rows.append(row_data)

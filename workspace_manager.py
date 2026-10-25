@@ -12,14 +12,129 @@ from __future__ import annotations
 import os
 import re
 import shutil
+import subprocess
+import tempfile
 import time
 from pathlib import Path
 from typing import List, Optional, Tuple, Dict, Any
 import openpyxl
+from openpyxl.utils import get_column_letter
 import pandas as pd
 
+try:
+    import formulas
+    HAS_FORMULAS = True
+except ImportError:
+    HAS_FORMULAS = False
 
-def evaluate_formula_cell(raw_val: Any, data_val: Any, ws_raw: Any, ws_data: Any = None) -> Any:
+
+def _evaluate_with_libreoffice(file_path: Path) -> Optional[Path]:
+    """Headless LibreOffice recalculation fallback if LibreOffice is available on PATH."""
+    soffice = shutil.which("soffice") or shutil.which("libreoffice")
+    if not soffice:
+        return None
+    try:
+        temp_dir = tempfile.mkdtemp(prefix="libreoffice_recalc_")
+        cmd = [soffice, "--headless", "--convert-to", "xlsx", "--outdir", temp_dir, str(file_path)]
+        res = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=20)
+        if res.returncode == 0:
+            out_file = Path(temp_dir) / file_path.name
+            if out_file.exists():
+                return out_file
+    except Exception:
+        pass
+    return None
+
+
+def _build_formula_cache(ws_raw: Any, ws_data: Any = None) -> Dict[str, Any]:
+    """Pre-calculates formulas in a workbook using LibreOffice or formulas library."""
+    cache: Dict[str, Any] = {}
+    wb = getattr(ws_raw, "parent", None)
+    if not wb:
+        return cache
+
+    file_path = getattr(wb, "_file_path", None)
+    temp_wb_path = None
+    if not file_path or not Path(file_path).exists():
+        try:
+            with tempfile.NamedTemporaryFile(suffix=".xlsx", delete=False) as tmp:
+                temp_wb_path = Path(tmp.name)
+            wb.save(temp_wb_path)
+            file_path = temp_wb_path
+        except Exception:
+            file_path = None
+
+    if file_path and Path(file_path).exists():
+        # 1. LibreOffice headless recalculation if available
+        recalc_path = _evaluate_with_libreoffice(Path(file_path))
+        if recalc_path and recalc_path.exists():
+            try:
+                recalc_wb = openpyxl.load_workbook(recalc_path, data_only=True)
+                for sheet_name in recalc_wb.sheetnames:
+                    s_calc = recalc_wb[sheet_name]
+                    for r in range(1, s_calc.max_row + 1):
+                        for c in range(1, s_calc.max_column + 1):
+                            v = s_calc.cell(row=r, column=c).value
+                            if v is not None:
+                                coord = f"{get_column_letter(c)}{r}"
+                                cache[f"{sheet_name.upper()}!{coord}"] = v
+            except Exception:
+                pass
+            finally:
+                try:
+                    shutil.rmtree(recalc_path.parent, ignore_errors=True)
+                except Exception:
+                    pass
+
+        # 2. Pure-Python formulas library evaluator
+        if not cache and HAS_FORMULAS:
+            try:
+                model = formulas.ExcelModel().loads(str(file_path)).finish()
+                calc_res = model.calculate()
+                for k, cell_obj in calc_res.items():
+                    m = re.search(r"\]([^']+)'!([A-Za-z0-9:]+)", str(k))
+                    if m:
+                        sheet_name, coord = m.groups()
+                        v = getattr(cell_obj, "value", cell_obj)
+                        if hasattr(v, "tolist"):
+                            v = v.tolist()
+                        while isinstance(v, list) and len(v) == 1:
+                            v = v[0]
+                        if hasattr(v, "item"):
+                            v = v.item()
+                        cache[f"{sheet_name.upper()}!{coord.upper()}"] = v
+            except Exception:
+                pass
+
+    if temp_wb_path and temp_wb_path.exists():
+        try:
+            os.remove(temp_wb_path)
+        except Exception:
+            pass
+
+    # Map raw formula strings to evaluated results
+    try:
+        sheet_name = getattr(ws_raw, "title", "").upper()
+        for row in ws_raw.iter_rows():
+            for cell in row:
+                if isinstance(cell.value, str) and cell.value.startswith("="):
+                    formula_key = f"{sheet_name}!{cell.value.upper().strip()}"
+                    coord_key = f"{sheet_name}!{cell.coordinate.upper()}"
+                    if coord_key in cache:
+                        cache[formula_key] = cache[coord_key]
+    except Exception:
+        pass
+
+    return cache
+
+
+def evaluate_formula_cell(
+    raw_val: Any,
+    data_val: Any,
+    ws_raw: Any,
+    ws_data: Any = None,
+    cell_coord: Optional[str] = None
+) -> Any:
     """Evaluates or extracts formula value if data_only cached value is None."""
     if data_val is not None and data_val != "":
         return data_val
@@ -28,6 +143,23 @@ def evaluate_formula_cell(raw_val: Any, data_val: Any, ws_raw: Any, ws_data: Any
     if not isinstance(raw_val, str) or not raw_val.startswith("="):
         return raw_val
 
+    # 1. Pure-Python formulas or LibreOffice evaluation from cache
+    if ws_raw is not None:
+        if not hasattr(ws_raw, "_formula_eval_cache"):
+            setattr(ws_raw, "_formula_eval_cache", _build_formula_cache(ws_raw, ws_data))
+        cache = getattr(ws_raw, "_formula_eval_cache", {})
+        sheet_title = getattr(ws_raw, "title", "").upper()
+
+        if cell_coord:
+            key_coord = f"{sheet_title}!{cell_coord.upper()}"
+            if key_coord in cache:
+                return cache[key_coord]
+
+        key_formula = f"{sheet_title}!{raw_val.upper().strip()}"
+        if key_formula in cache:
+            return cache[key_formula]
+
+    # 2. Legacy fallback regex evaluator for simple operations
     formula = raw_val[1:].strip()
 
     # Try simple product: =F2*G2
@@ -96,6 +228,7 @@ def evaluate_formula_cell(raw_val: Any, data_val: Any, ws_raw: Any, ws_data: Any
         except Exception:
             pass
 
+    # 3. Last fallback: never crash, return raw formula
     return raw_val
 
 
@@ -211,7 +344,9 @@ class WorkspaceManager:
         data_only=True returns evaluated formula values (if saved by Excel).
         """
         path = self.get_current_file_path()
-        return openpyxl.load_workbook(path, data_only=data_only)
+        wb = openpyxl.load_workbook(path, data_only=data_only)
+        wb._file_path = Path(path)
+        return wb
 
     def save_workbook(self, wb: openpyxl.Workbook) -> None:
         """Saves openpyxl Workbook to the current working copy."""
@@ -240,7 +375,8 @@ class WorkspaceManager:
             for c in range(1, ws_raw.max_column + 1):
                 raw_v = ws_raw.cell(row=r, column=c).value
                 data_v = ws_data.cell(row=r, column=c).value
-                row.append(evaluate_formula_cell(raw_v, data_v, ws_raw, ws_data))
+                cell_coord = f"{get_column_letter(c)}{r}"
+                row.append(evaluate_formula_cell(raw_v, data_v, ws_raw, ws_data, cell_coord=cell_coord))
             rows_data.append(row)
 
         df = pd.DataFrame(rows_data, columns=headers)

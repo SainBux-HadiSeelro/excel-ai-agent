@@ -2,8 +2,8 @@
 Multi-provider LLM abstraction for Excel AI Agent.
 Supports:
 - OpenAI (gpt-4o, gpt-4o-mini, etc.)
-- Anthropic (claude-3-5-sonnet, claude-3-5-haiku, etc.)
-- Google Gemini (gemini-2.5-flash, gemini-1.5-flash, etc.)
+- Anthropic (claude-haiku-5-5, claude-3-5-sonnet, etc.)
+- Google Gemini (gemini-3.8-flash, gemini-2.5-flash, etc.)
 - Mock / Test Provider (for offline testing)
 """
 
@@ -23,8 +23,8 @@ load_dotenv()
 
 # Single source of truth for the default Gemini model.
 # Override with the GEMINI_MODEL environment variable if needed.
-DEFAULT_GEMINI_MODEL = os.getenv("GEMINI_MODEL", "gemini-2.5-flash")
-FALLBACK_GEMINI_MODEL = os.getenv("GEMINI_FALLBACK_MODEL", "gemini-1.5-flash")
+DEFAULT_GEMINI_MODEL = os.getenv("GEMINI_MODEL", "gemini-3.8-flash")
+FALLBACK_GEMINI_MODEL = os.getenv("GEMINI_FALLBACK_MODEL", "gemini-2.5-flash")
 
 
 @dataclass
@@ -187,7 +187,7 @@ class AnthropicProvider(BaseLLMProvider):
 
     def __init__(self, api_key: Optional[str] = None, model: Optional[str] = None):
         key = api_key or os.getenv("ANTHROPIC_API_KEY", "")
-        m = model or os.getenv("ANTHROPIC_MODEL", "claude-3-5-haiku-20241022")
+        m = model or os.getenv("ANTHROPIC_MODEL", "claude-haiku-5-5")
         super().__init__(api_key=key, model=m)
         if not self.api_key:
             raise ValueError("Anthropic API key not found. Set ANTHROPIC_API_KEY in .env or pass api_key.")

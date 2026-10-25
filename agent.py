@@ -165,9 +165,14 @@ class ExcelAgent:
                     tools=TOOL_DEFINITIONS
                 )
             except Exception as e:
+                err_msg = str(e)
+                if any(k in err_msg.lower() for k in ["not found", "model_not_found", "does not exist", "404", "unknown model", "retired"]):
+                    display_msg = f"Model Error: The model '{getattr(self.provider, 'model', 'unknown')}' was not found or has been retired. Please change the Model Name field in the sidebar or environment settings. (Details: {err_msg})"
+                else:
+                    display_msg = f"LLM Error: {err_msg}"
                 return AgentResult(
                     success=False,
-                    final_response=f"LLM Error: {str(e)}",
+                    final_response=display_msg,
                     steps_taken=step,
                     tool_traces=tool_traces,
                     error=str(e)

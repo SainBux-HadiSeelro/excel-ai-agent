@@ -305,7 +305,7 @@ with st.sidebar:
     default_models = {
         "Gemini": DEFAULT_GEMINI_MODEL,
         "OpenAI": "gpt-4o-mini",
-        "Anthropic": "claude-3-5-haiku-20241022",
+        "Anthropic": "claude-haiku-5-5",
         "Offline Demo (Mock)": "mock-model"
     }
 
@@ -390,7 +390,11 @@ with st.sidebar:
                 st.session_state.agent = ExcelAgent(manager=st.session_state.manager, provider=llm)
                 st.session_state.agent_config = current_config
             except Exception as e:
-                st.sidebar.error(f"Provider Error: {str(e)}")
+                err_str = str(e)
+                if any(k in err_str.lower() for k in ["not found", "model_not_found", "does not exist", "404", "unknown model", "retired"]):
+                    st.sidebar.error(f"Provider Error: {err_str}\n\n💡 **Tip:** Model not found or retired. Please update the **Model Name** field above.")
+                else:
+                    st.sidebar.error(f"Provider Error: {err_str}")
 
     st.markdown("---")
     # Status & Undo Controls
@@ -618,7 +622,11 @@ with tab_chat:
 
                     # Render final response
                     if not agent_res.success and agent_res.error:
-                        st.error(f"❌ {agent_res.final_response}")
+                        err_full = (agent_res.final_response or "") + " " + str(agent_res.error)
+                        if any(k in err_full.lower() for k in ["not found", "model_not_found", "does not exist", "404", "unknown model", "retired"]):
+                            st.error(f"❌ {agent_res.final_response}\n\n💡 **Tip:** Model not found or retired. Please update the **Model Name** field in the sidebar.")
+                        else:
+                            st.error(f"❌ {agent_res.final_response}")
                     else:
                         st.markdown(agent_res.final_response)
 

@@ -189,3 +189,19 @@ def test_agent_max_steps_custom_limit(sample_manager):
     assert "Agent reached maximum execution step limit (4)" in res.final_response
 
 
+def test_agent_model_not_found_guidance(sample_manager):
+    from llm import BaseLLMProvider
+
+    class ModelNotFoundProvider(BaseLLMProvider):
+        def chat(self, messages, tools=None, temperature=0.1):
+            raise RuntimeError("Model 'retired-model-id' does not exist or was not found (404).")
+
+    agent = ExcelAgent(manager=sample_manager, provider=ModelNotFoundProvider(model="retired-model-id"))
+    res = agent.run("Perform calculation")
+
+    assert res.success is False
+    assert "Model Name" in res.final_response
+    assert "retired-model-id" in res.final_response
+
+
+

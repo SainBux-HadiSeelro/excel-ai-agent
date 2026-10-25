@@ -1,4 +1,23 @@
+<div align="center">
+
 # 📊 Excel AI Agent
+### *Autonomous Multilingual Spreadsheet Assistant (English & Roman Urdu)*
+
+[![Live Demo](https://img.shields.io/badge/Live_Demo-Streamlit_App-FF4B4B?style=for-the-badge&logo=streamlit&logoColor=white)](https://excel-agent-ai.streamlit.app/)
+[![Python](https://img.shields.io/badge/Python-3.11%2B-blue?style=for-the-badge&logo=python&logoColor=white)](https://python.org)
+[![Streamlit](https://img.shields.io/badge/Streamlit-1.66%2B-FF4B4B?style=for-the-badge&logo=streamlit&logoColor=white)](https://streamlit.io)
+[![Status: Live](https://img.shields.io/badge/Status-Live-00ff66?style=for-the-badge)](https://excel-agent-ai.streamlit.app/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg?style=for-the-badge)](https://opensource.org/licenses/MIT)
+
+<br/>
+
+### 🌐 **[👉 Click Here to Open Live Demo (excel-agent-ai.streamlit.app)](https://excel-agent-ai.streamlit.app/)**
+
+[🎮 Live Web App](https://excel-agent-ai.streamlit.app/) • [🌟 Features](#-key-features) • [💬 Example Prompts](#-10-example-prompts-english--roman-urdu) • [🚀 Quick Start](#-quickstart--setup) • [🧰 Tools Reference](#-available-tools-reference)
+
+---
+
+</div>
 
 A complete, production-quality autonomous AI Agent in Python that interprets plain language instructions in **English** and **Roman Urdu** (e.g., *"total sales nikalo"*, *"duplicates hata do"*, *"region ke hisaab se chart banao"*, *"do files merge karo"*) and executes them safely and reliably on Excel (`.xlsx`) files.
 
@@ -124,7 +143,9 @@ This generates `sample_data/sales.xlsx` with realistic sales rows, formulas, mes
 
 ### 1. Streamlit Web UI
 
-Launch the web interface:
+> 🌐 **Live Cloud Demo**: You can run the application directly in your browser without local installation at **[excel-agent-ai.streamlit.app](https://excel-agent-ai.streamlit.app/)**.
+
+To run locally, launch the web interface:
 
 ```bash
 streamlit run app.py

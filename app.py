@@ -2,7 +2,7 @@
 Streamlit Web UI for Excel AI Agent.
 Provides:
 - Sidebar: File upload, Provider & Model selector, API key input, Session status
-- Main Area: Interactive Chat, Live tool execution traces, Sheet Preview table, Download & Undo buttons
+- Main Area: Interactive Chat, Quick action pills, Live tool execution traces, Sheet Preview table, Download & Undo buttons
 """
 
 from __future__ import annotations
@@ -30,28 +30,128 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# Custom CSS for polished interface
+# Custom CSS for modern polished interface
 st.markdown("""
 <style>
-    .reportview-container .main .block-container{
-        padding-top: 1.5rem;
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+    
+    html, body, [class*="css"] {
+        font-family: 'Inter', sans-serif;
     }
-    .tool-pill {
+    
+    .main .block-container {
+        padding-top: 1.8rem;
+        padding-bottom: 3rem;
+        max-width: 1200px;
+    }
+    
+    /* Hero Banner */
+    .hero-banner {
+        background: linear-gradient(135deg, #0F2027 0%, #203A43 50%, #2C5364 100%);
+        color: white;
+        padding: 1.8rem 2.2rem;
+        border-radius: 16px;
+        margin-bottom: 1.5rem;
+        box-shadow: 0 10px 25px rgba(15, 32, 39, 0.15);
+    }
+    .hero-title {
+        font-size: 2rem;
+        font-weight: 700;
+        margin: 0;
+        color: #FFFFFF;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+    }
+    .hero-subtitle {
+        font-size: 1rem;
+        color: #E2E8F0;
+        margin-top: 6px;
+        margin-bottom: 12px;
+    }
+    .badge-pill {
         display: inline-block;
-        padding: 2px 8px;
-        background-color: #EBF3FB;
-        color: #1F4E78;
-        border-radius: 4px;
-        font-family: monospace;
-        font-size: 0.85em;
-        margin: 2px;
+        padding: 4px 12px;
+        background: rgba(255, 255, 255, 0.15);
+        backdrop-filter: blur(8px);
+        color: #F8FAFC;
+        border-radius: 20px;
+        font-size: 0.8rem;
+        font-weight: 500;
+        margin-right: 8px;
+        border: 1px solid rgba(255, 255, 255, 0.2);
     }
+    
+    /* Feature Welcome Cards */
+    .welcome-container {
+        background: #FFFFFF;
+        border: 1px solid #E2E8F0;
+        border-radius: 16px;
+        padding: 2rem;
+        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.03);
+        margin-bottom: 1.5rem;
+    }
+    .feature-card {
+        background: #F8FAFC;
+        border: 1px solid #E2E8F0;
+        border-radius: 12px;
+        padding: 1.2rem;
+        height: 100%;
+        transition: transform 0.2s, box-shadow 0.2s;
+    }
+    .feature-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 16px rgba(0,0,0,0.06);
+    }
+    .feature-icon {
+        font-size: 1.8rem;
+        margin-bottom: 8px;
+    }
+    .feature-title {
+        font-weight: 600;
+        font-size: 1rem;
+        color: #1E293B;
+        margin-bottom: 4px;
+    }
+    .feature-desc {
+        font-size: 0.85rem;
+        color: #64748B;
+        line-height: 1.4;
+    }
+
+    /* Active File Pill */
+    .file-status-bar {
+        background: #F0FDF4;
+        border: 1px solid #BBF7D0;
+        color: #166534;
+        padding: 10px 16px;
+        border-radius: 10px;
+        font-size: 0.9rem;
+        font-weight: 500;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        margin-bottom: 1.2rem;
+    }
+
+    /* Tool traces styling */
+    .trace-card {
+        background: #F8FAFC;
+        border-left: 3px solid #3B82F6;
+        border-radius: 6px;
+        padding: 8px 12px;
+        margin: 6px 0;
+        font-family: monospace;
+        font-size: 0.85rem;
+    }
+    
+    /* Destructive Confirmation Box */
     .destructive-box {
-        border: 2px solid #E06C75;
-        border-radius: 8px;
-        padding: 12px;
-        background-color: #FFF5F5;
-        margin: 10px 0;
+        background: #FEF2F2;
+        border: 1.5px solid #FCA5A5;
+        border-radius: 12px;
+        padding: 1.2rem;
+        margin: 1.2rem 0;
     }
 </style>
 """, unsafe_allow_html=True)
@@ -74,10 +174,10 @@ if "pending_confirmation" not in st.session_state:
 
 # Sidebar Configuration
 with st.sidebar:
-    st.title("📊 Excel AI Agent")
-    st.caption("Natural language spreadsheet manipulation (English & Roman Urdu)")
+    st.markdown("### 📊 **Excel AI Settings**")
+    st.caption("Multilingual Spreadsheet Agent • English & Roman Urdu")
 
-    st.subheader("1. LLM Settings")
+    st.markdown("#### 1. 🤖 Provider & Model")
     has_any_key = any(
         os.getenv(k) for k in ["GEMINI_API_KEY", "GOOGLE_API_KEY", "OPENAI_API_KEY", "ANTHROPIC_API_KEY"]
     )
@@ -117,12 +217,12 @@ with st.sidebar:
     )
 
     if "Offline" not in provider_choice and not api_key_input:
-        st.info("💡 **No API key?** Switch Provider to **'Offline Demo (Mock)'** above to test without an API key.")
+        st.info("💡 **No API key?** Switch Provider to **'Offline Demo (Mock)'** above to test instantly without an API key.")
 
     st.markdown("---")
-    st.subheader("2. Workbook Upload")
+    st.markdown("#### 2. 📂 Upload Workbook")
     uploaded_file = st.file_uploader(
-        "Choose an Excel (.xlsx) or CSV file",
+        "Upload Excel (.xlsx) or CSV",
         type=["xlsx", "csv"]
     )
 
@@ -131,7 +231,6 @@ with st.sidebar:
     if uploaded_file is not None:
         file_id = f"{uploaded_file.name}_{uploaded_file.size}"
         if st.session_state.get("current_file_id") != file_id:
-            # Save temp copy and initialize workspace
             temp_dir = Path("temp_uploads")
             temp_dir.mkdir(exist_ok=True)
             temp_path = temp_dir / uploaded_file.name
@@ -147,7 +246,7 @@ with st.sidebar:
             st.session_state.traces = []
             st.session_state.pending_confirmation = None
             st.session_state.agent = None
-            st.success(f"Loaded: {uploaded_file.name}")
+            st.toast(f"✅ Loaded: {uploaded_file.name}", icon="📁")
 
     elif use_sample:
         if st.session_state.get("current_file_id") != "sample_sales":
@@ -163,9 +262,9 @@ with st.sidebar:
             st.session_state.traces = []
             st.session_state.pending_confirmation = None
             st.session_state.agent = None
-            st.success("Loaded sample_data/sales.xlsx")
+            st.toast("✅ Loaded sample_data/sales.xlsx", icon="📁")
 
-    # Load agent if keys available or offline demo (only instantiate when needed/changed)
+    # Load agent instance
     current_config = f"{provider_choice}_{model_choice}_{api_key_input}"
     if st.session_state.get("agent_config") != current_config or st.session_state.agent is None:
         if api_key_input or "Offline" in provider_choice:
@@ -187,14 +286,14 @@ with st.sidebar:
     st.markdown("---")
     # Status & Undo Controls
     history_count = st.session_state.manager.get_history_count()
-    st.write(f"🔄 Undoable steps available: **{history_count}**")
+    st.markdown(f"**🔄 Undo History:** `{history_count}` snapshot(s)")
 
     col_u1, col_u2 = st.columns(2)
     with col_u1:
         if st.button("↩️ Undo", use_container_width=True, disabled=(history_count == 0)):
             undo_res = st.session_state.manager.undo()
             if undo_res["success"]:
-                st.success(undo_res["message"])
+                st.toast(undo_res["message"], icon="↩️")
                 st.rerun()
             else:
                 st.warning(undo_res["message"])
@@ -211,34 +310,129 @@ with st.sidebar:
                     use_container_width=True
                 )
 
+# Top Hero Banner
+st.markdown("""
+<div class="hero-banner">
+    <div class="hero-title">
+        <span>📊 Excel AI Agent</span>
+    </div>
+    <div class="hero-subtitle">
+        Autonomous spreadsheet assistant that understands English & Roman Urdu — formulas, cleanup, charts & analysis.
+    </div>
+    <div>
+        <span class="badge-pill">🗣️ English & Roman Urdu</span>
+        <span class="badge-pill">🛡️ 100% Non-Destructive Sandbox</span>
+        <span class="badge-pill">⚡ Live Excel Formulas</span>
+        <span class="badge-pill">↩️ Instant Undo</span>
+    </div>
+</div>
+""", unsafe_allow_html=True)
 
-# Main Content Layout: Two Tabs (Chat & Data Preview)
+# Main Content Layout: Two Tabs
 tab_chat, tab_preview = st.tabs(["💬 AI Assistant", "📑 Sheet Preview"])
 
 # TAB 1: Chat and Tool Traces
 with tab_chat:
     if not st.session_state.file_loaded:
-        st.info("👈 Please upload an Excel/CSV file or click 'Load Sample Data' in the sidebar to begin.")
+        # Welcome Empty State
+        st.markdown("""
+        <div class="welcome-container">
+            <h3 style="margin-top:0; color:#1E293B;">👋 Welcome to Excel AI Agent!</h3>
+            <p style="color:#64748B; font-size:0.95rem;">
+                Get started in seconds. Upload your own <b>.xlsx</b> or <b>.csv</b> spreadsheet, or click the button below to load the ready-made demo dataset.
+            </p>
+        </div>
+        """, unsafe_allow_html=True)
+
+        col_w1, col_w2, col_w3 = st.columns(3)
+        with col_w1:
+            st.markdown("""
+            <div class="feature-card">
+                <div class="feature-icon">🧠</div>
+                <div class="feature-title">Multilingual AI</div>
+                <div class="feature-desc">Prompt in plain English or Roman Urdu like <i>"total sales nikalo"</i> or <i>"duplicates hata do"</i>.</div>
+            </div>
+            """, unsafe_allow_html=True)
+        with col_w2:
+            st.markdown("""
+            <div class="feature-card">
+                <div class="feature-icon">🛡️</div>
+                <div class="feature-title">Safe & Non-Destructive</div>
+                <div class="feature-desc">Works strictly in an isolated workspace. Full undo history and confirmation guards for deletions.</div>
+            </div>
+            """, unsafe_allow_html=True)
+        with col_w3:
+            st.markdown("""
+            <div class="feature-card">
+                <div class="feature-icon">📈</div>
+                <div class="feature-title">Dynamic Formulas & Charts</div>
+                <div class="feature-desc">Writes live `=SUM()` formulas over hardcoded numbers, and creates native Excel charts.</div>
+            </div>
+            """, unsafe_allow_html=True)
+
+        st.markdown("<br/>", unsafe_allow_html=True)
+        if st.button("📁 Load Sample Dataset (sales.xlsx) to Start Testing", type="primary", use_container_width=True):
+            sample_path = Path("sample_data/sales.xlsx")
+            if not sample_path.exists():
+                import generate_sample_data
+            st.session_state.manager = WorkspaceManager()
+            st.session_state.manager.init_from_file(sample_path)
+            st.session_state.current_file_name = "sales.xlsx"
+            st.session_state.current_file_id = "sample_sales"
+            st.session_state.file_loaded = True
+            st.rerun()
+
     else:
-        st.caption(f"Currently working on: **{st.session_state.current_file_name}** (Isolated Workspace)")
+        # File status bar
+        active_sheets = st.session_state.manager.get_sheet_names()
+        st.markdown(f"""
+        <div class="file-status-bar">
+            <span>🟢</span>
+            <span>Active Workbook: <b>{st.session_state.current_file_name}</b> ({len(active_sheets)} sheet(s): {', '.join(active_sheets)}) • Isolated Safe Workspace</span>
+        </div>
+        """, unsafe_allow_html=True)
+
+        # Quick Action Suggestion Chips
+        st.markdown("<p style='font-size:0.85rem; font-weight:600; color:#64748B; margin-bottom:6px;'>⚡ QUICK PROMPTS (Click to run):</p>", unsafe_allow_html=True)
+        qcol1, qcol2, qcol3, qcol4 = st.columns(4)
+        quick_selected = None
+        with qcol1:
+            if st.button("📊 Total sales nikalo", use_container_width=True):
+                quick_selected = "total sales nikalo"
+        with qcol2:
+            if st.button("🧹 Duplicates hata do", use_container_width=True):
+                quick_selected = "Order_ID ke hisaab se duplicates hata do"
+        with qcol3:
+            if st.button("📈 Region ka chart banao", use_container_width=True):
+                quick_selected = "Targets sheet mein region ke hisaab se column chart banao"
+        with qcol4:
+            if st.button("✨ Clean Sales Rep text", use_container_width=True):
+                quick_selected = "Sales Rep column D ke extra spaces hatao aur title case kardo"
 
         # Display Chat History
         for msg in st.session_state.messages:
             with st.chat_message(msg["role"]):
                 st.markdown(msg["content"])
                 if "traces" in msg and msg["traces"]:
-                    with st.expander(f"🛠️ Tool Traces ({len(msg['traces'])} steps)"):
+                    with st.expander(f"🛠️ Tool Execution Traces ({len(msg['traces'])} action(s))"):
                         for t in msg["traces"]:
                             st.markdown(f"**Step {t.step}: `{t.tool_name}`**")
-                            st.json({"args": t.arguments, "result": t.result})
+                            st.json({"arguments": t.arguments, "result": t.result})
 
         # Destructive Confirmation Card (if any pending)
         if st.session_state.pending_confirmation:
             conf = st.session_state.pending_confirmation
-            st.warning(f"⚠️ **Destructive Action Confirmation Needed**: {conf.get('details', {}).get('warning', 'Proceed?')}")
+            warning_text = conf.get('details', {}).get('warning', 'Do you confirm this action?')
+            st.markdown(f"""
+            <div class="destructive-box">
+                <h4 style="margin:0 0 8px 0; color:#991B1B;">⚠️ Confirmation Required (Destructive Safety Guard)</h4>
+                <p style="margin:0; color:#7F1D1D; font-size:0.95rem;">{warning_text}</p>
+            </div>
+            """, unsafe_allow_html=True)
+
             col_c1, col_c2 = st.columns([1, 1])
             with col_c1:
-                if st.button("✅ Confirm & Execute", type="primary", use_container_width=True):
+                if st.button("✅ Confirm & Execute Action", type="primary", use_container_width=True):
                     with st.spinner("Executing confirmed action..."):
                         res = st.session_state.agent.confirm_and_resume(confirmed=True)
                         st.session_state.pending_confirmation = None
@@ -254,22 +448,23 @@ with tab_chat:
                     st.session_state.pending_confirmation = None
                     st.session_state.messages.append({
                         "role": "assistant",
-                        "content": "Action cancelled by user.",
+                        "content": "Action cancelled by user. No modifications were made.",
                         "traces": []
                     })
                     st.rerun()
 
-        # Chat Input
-        user_prompt = st.chat_input("Ask Excel AI (e.g. 'total sales nikalo', 'duplicates hata do', 'region ka chart banao')...")
+        # Chat Input (or quick prompt trigger)
+        chat_input_val = st.chat_input("Ask Excel AI (e.g. 'total sales nikalo', 'duplicates hata do', 'region ka chart banao')...")
+        prompt_to_run = quick_selected or chat_input_val
 
-        if user_prompt:
+        if prompt_to_run:
             if not st.session_state.agent:
                 st.error("⚠️ Please supply a valid API key in the sidebar, or select **Offline Demo (Mock)** in Provider to test without an API key.")
             else:
                 # Add user prompt to chat
-                st.session_state.messages.append({"role": "user", "content": user_prompt})
+                st.session_state.messages.append({"role": "user", "content": prompt_to_run})
                 with st.chat_message("user"):
-                    st.markdown(user_prompt)
+                    st.markdown(prompt_to_run)
 
                 with st.chat_message("assistant"):
                     trace_placeholder = st.empty()
@@ -287,7 +482,7 @@ with tab_chat:
                         )
 
                     with st.spinner("Analyzing spreadsheet and executing..."):
-                        agent_res = st.session_state.agent.run(user_prompt, on_step=streamlit_on_step)
+                        agent_res = st.session_state.agent.run(prompt_to_run, on_step=streamlit_on_step)
 
                     trace_placeholder.empty()
 
@@ -298,10 +493,10 @@ with tab_chat:
                         st.markdown(agent_res.final_response)
 
                     if agent_res.tool_traces:
-                        with st.expander(f"🛠️ Tool Traces ({len(agent_res.tool_traces)} steps)"):
+                        with st.expander(f"🛠️ Tool Execution Traces ({len(agent_res.tool_traces)} action(s))"):
                             for t in agent_res.tool_traces:
                                 st.markdown(f"**Step {t.step}: `{t.tool_name}`**")
-                                st.json({"args": t.arguments, "result": t.result})
+                                st.json({"arguments": t.arguments, "result": t.result})
 
                     # Handle confirmation state
                     if agent_res.pending_confirmation:
@@ -320,24 +515,32 @@ with tab_chat:
 # TAB 2: Sheet Preview
 with tab_preview:
     if not st.session_state.file_loaded:
-        st.info("No workbook loaded yet.")
+        st.info("👈 Please load a workbook to preview sheets and data.")
     else:
         sheet_names = st.session_state.manager.get_sheet_names()
-        selected_sheet = st.selectbox("Select Sheet to View", options=sheet_names)
+        col_s1, col_s2 = st.columns([2, 1])
+        with col_s1:
+            selected_sheet = st.selectbox("Select Sheet to View", options=sheet_names)
+        with col_s2:
+            st.caption("Active Session View")
+            st.write(f"📁 **{st.session_state.current_file_name}**")
 
-        col_meta1, col_meta2 = st.columns(2)
         try:
             df, active_s = st.session_state.manager.get_sheet_dataframe(sheet_name=selected_sheet, max_rows=500)
-            # Normalize mixed-type object columns so Streamlit/Arrow can serialize them safely
             df = df.convert_dtypes()
             for col in df.columns:
                 if df[col].dtype == object:
                     df[col] = df[col].astype("string")
-            with col_meta1:
-                st.metric("Total Visible Rows", f"{len(df):,}")
-            with col_meta2:
-                st.metric("Total Columns", f"{len(df.columns)}")
 
-            st.dataframe(df, use_container_width=True, height=450)
+            # Metrics row
+            mcol1, mcol2, mcol3 = st.columns(3)
+            with mcol1:
+                st.metric("Total Rows", f"{len(df):,}")
+            with mcol2:
+                st.metric("Total Columns", f"{len(df.columns)}")
+            with mcol3:
+                st.metric("Current Sheet", selected_sheet)
+
+            st.dataframe(df, use_container_width=True, height=480)
         except Exception as e:
             st.error(f"Error reading sheet data: {str(e)}")

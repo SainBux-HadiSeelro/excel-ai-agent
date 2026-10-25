@@ -121,9 +121,27 @@ def test_cleanup_preserves_old_folder_with_recently_modified_history_file(tmp_pa
 
 
 def test_upload_path_sanitization():
-    malicious_name = "../../../etc/passwd.xlsx"
-    sanitized = Path(malicious_name).name
-    assert sanitized == "passwd.xlsx"
-    assert ".." not in sanitized
-    assert "/" not in sanitized
-    assert "\\" not in sanitized
+    from workspace_manager import safe_upload_name
+
+    # 1. Forward slash path traversal
+    assert safe_upload_name("../../../etc/passwd.xlsx") == "passwd.xlsx"
+
+    # 2. Backslash path traversal & Windows absolute paths on any OS
+    assert safe_upload_name("C:\\Windows\\System32\\file.xlsx") == "file.xlsx"
+    assert safe_upload_name("..\\..\\secret.xlsx") == "secret.xlsx"
+    assert safe_upload_name("subfolder\\nested/data.xlsx") == "data.xlsx"
+
+    # 3. Leading dots stripped (prevents hidden files and dot-relative names)
+    assert safe_upload_name("...hidden_sheet.xlsx") == "hidden_sheet.xlsx"
+    assert safe_upload_name(".gitignore.xlsx") == "gitignore.xlsx"
+
+    # 4. Fallback to upload.xlsx if empty, whitespace, or only dots
+    assert safe_upload_name("") == "upload.xlsx"
+    assert safe_upload_name("   ") == "upload.xlsx"
+    assert safe_upload_name("..") == "upload.xlsx"
+    assert safe_upload_name("...") == "upload.xlsx"
+    assert safe_upload_name(None) == "upload.xlsx"
+
+    # 5. Normal safe filenames preserved
+    assert safe_upload_name("sales_q1.xlsx") == "sales_q1.xlsx"
+    assert safe_upload_name("monthly_report.csv") == "monthly_report.csv"

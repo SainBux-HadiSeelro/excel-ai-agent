@@ -538,6 +538,24 @@ class WorkspaceManager:
         return wb.sheetnames
 
 
+def safe_upload_name(name: Optional[str]) -> str:
+    """Sanitizes an uploaded filename:
+    - Normalizes both '/' and '\\' separators regardless of host OS.
+    - Strips leading dots and whitespace to prevent hidden files and directory traversal.
+    - Falls back to 'upload.xlsx' if the resulting name is empty.
+    """
+    if not name or not isinstance(name, str):
+        return "upload.xlsx"
+
+    normalized = name.replace("\\", "/")
+    base = normalized.rstrip("/").split("/")[-1]
+    sanitized = base.lstrip(".").strip()
+
+    if not sanitized:
+        return "upload.xlsx"
+    return sanitized
+
+
 def _get_newest_mtime(folder: Path) -> float:
     """Finds the newest mtime recursively inside folder, including the folder itself."""
     try:

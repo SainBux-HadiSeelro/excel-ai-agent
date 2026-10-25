@@ -21,7 +21,7 @@ from dotenv import load_dotenv
 # Ensure local imports work
 sys.path.insert(0, str(Path(__file__).parent.resolve()))
 
-from workspace_manager import WorkspaceManager, cleanup_stale_sessions, load_sheet_dataframe
+from workspace_manager import WorkspaceManager, cleanup_stale_sessions, load_sheet_dataframe, safe_upload_name
 from llm import get_llm_provider, GeminiProvider, OpenAIProvider, AnthropicProvider, DEFAULT_GEMINI_MODEL
 from agent import ExcelAgent, ToolExecutionTrace
 
@@ -337,7 +337,7 @@ with st.sidebar:
     use_sample = st.button("📁 Load Sample Data (sales.xlsx)", use_container_width=True)
 
     if uploaded_file is not None:
-        safe_name = Path(uploaded_file.name).name
+        safe_name = safe_upload_name(uploaded_file.name)
         file_id = f"{safe_name}_{uploaded_file.size}"
         if st.session_state.get("current_file_id") != file_id:
             session_upload_dir = Path("temp_uploads") / st.session_state.session_id

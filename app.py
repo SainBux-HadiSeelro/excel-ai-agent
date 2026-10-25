@@ -9,7 +9,9 @@ from __future__ import annotations
 
 import os
 import sys
+import html
 from pathlib import Path
+from typing import List
 import streamlit as st
 import pandas as pd
 from dotenv import load_dotenv
@@ -22,6 +24,32 @@ from llm import get_llm_provider, GeminiProvider, OpenAIProvider, AnthropicProvi
 from agent import ExcelAgent, ToolExecutionTrace
 
 load_dotenv()
+
+
+def render_file_status_bar_html(filename: str, active_sheets: List[str]) -> str:
+    """Renders HTML for active file status bar with all inputs safely HTML-escaped."""
+    safe_name = html.escape(str(filename or ""))
+    safe_sheets = [html.escape(str(s)) for s in active_sheets]
+    sheets_str = ", ".join(safe_sheets)
+    count = len(active_sheets)
+    return (
+        f'<div class="file-status-bar">'
+        f'<span>🟢</span>'
+        f'<span>Active Workbook: <b>{safe_name}</b> ({count} sheet(s): {sheets_str}) • Isolated Safe Workspace</span>'
+        f'</div>'
+    )
+
+
+def render_destructive_confirmation_html(warning_text: str) -> str:
+    """Renders HTML for destructive confirmation warning card with content safely HTML-escaped."""
+    safe_warning = html.escape(str(warning_text or ""))
+    return (
+        f'<div class="destructive-box">'
+        f'<h4 style="margin:0 0 8px 0; color:#991B1B;">⚠️ Confirmation Required (Destructive Safety Guard)</h4>'
+        f'<p style="margin:0; color:#7F1D1D; font-size:0.95rem;">{safe_warning}</p>'
+        f'</div>'
+    )
+
 
 st.set_page_config(
     page_title="Excel AI Agent",
@@ -458,12 +486,10 @@ with tab_chat:
     else:
         # File status bar
         active_sheets = st.session_state.manager.get_sheet_names()
-        st.markdown(f"""
-        <div class="file-status-bar">
-            <span>🟢</span>
-            <span>Active Workbook: <b>{st.session_state.current_file_name}</b> ({len(active_sheets)} sheet(s): {', '.join(active_sheets)}) • Isolated Safe Workspace</span>
-        </div>
-        """, unsafe_allow_html=True)
+        st.markdown(
+            render_file_status_bar_html(st.session_state.current_file_name, active_sheets),
+            unsafe_allow_html=True
+        )
 
         # Quick Action Suggestion Chips (2x2 grid for mobile & desktop touch friendliness)
         st.markdown("<p style='font-size:0.85rem; font-weight:600; color:#64748B; margin-bottom:6px;'>⚡ QUICK PROMPTS (Click to run):</p>", unsafe_allow_html=True)
@@ -498,12 +524,10 @@ with tab_chat:
         if st.session_state.pending_confirmation:
             conf = st.session_state.pending_confirmation
             warning_text = conf.get('details', {}).get('warning', 'Do you confirm this action?')
-            st.markdown(f"""
-            <div class="destructive-box">
-                <h4 style="margin:0 0 8px 0; color:#991B1B;">⚠️ Confirmation Required (Destructive Safety Guard)</h4>
-                <p style="margin:0; color:#7F1D1D; font-size:0.95rem;">{warning_text}</p>
-            </div>
-            """, unsafe_allow_html=True)
+            st.markdown(
+                render_destructive_confirmation_html(warning_text),
+                unsafe_allow_html=True
+            )
 
             col_c1, col_c2 = st.columns([1, 1])
             with col_c1:

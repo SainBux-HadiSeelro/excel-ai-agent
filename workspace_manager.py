@@ -15,6 +15,7 @@ import shutil
 import subprocess
 import tempfile
 import time
+from collections import OrderedDict
 from pathlib import Path
 from typing import List, Optional, Tuple, Dict, Any
 import openpyxl
@@ -27,9 +28,25 @@ try:
 except ImportError:
     HAS_FORMULAS = False
 
-_MODULE_FORMULA_CACHE: Dict[Tuple[str, int, int], Dict[str, Any]] = {}
-_MODULE_OVERSIZE_FLAGS: Dict[Tuple[str, int, int], bool] = {}
+MAX_CACHE_ENTRIES = 50
+_MODULE_FORMULA_CACHE: OrderedDict[Tuple[str, int, int], Dict[str, Any]] = OrderedDict()
+_MODULE_OVERSIZE_FLAGS: OrderedDict[Tuple[str, int, int], bool] = OrderedDict()
 FORMULA_CELL_LIMIT = 20000
+
+
+def _cache_put(cache_key: Tuple[str, int, int], eval_cache: Dict[str, Any], is_oversize: bool) -> None:
+    """Stores entries in bounded LRU caches (max entries ~50)."""
+    if cache_key in _MODULE_FORMULA_CACHE:
+        _MODULE_FORMULA_CACHE.move_to_end(cache_key)
+    _MODULE_FORMULA_CACHE[cache_key] = eval_cache
+    while len(_MODULE_FORMULA_CACHE) > MAX_CACHE_ENTRIES:
+        _MODULE_FORMULA_CACHE.popitem(last=False)
+
+    if cache_key in _MODULE_OVERSIZE_FLAGS:
+        _MODULE_OVERSIZE_FLAGS.move_to_end(cache_key)
+    _MODULE_OVERSIZE_FLAGS[cache_key] = is_oversize
+    while len(_MODULE_OVERSIZE_FLAGS) > MAX_CACHE_ENTRIES:
+        _MODULE_OVERSIZE_FLAGS.popitem(last=False)
 
 
 def get_file_cache_key(file_path: str | Path) -> Optional[Tuple[str, int, int]]:
@@ -52,7 +69,10 @@ def invalidate_formula_cache(file_path: Optional[str | Path] = None) -> None:
         _MODULE_OVERSIZE_FLAGS.clear()
     else:
         resolved = str(Path(file_path).resolve())
-        keys_to_remove = [k for k in _MODULE_FORMULA_CACHE if k[0] == resolved]
+        keys_to_remove = [
+            k for k in _MODULE_FORMULA_CACHE
+            if k[0] == resolved or k[0].startswith(resolved + os.sep) or k[0].startswith(resolved + "/")
+        ]
         for k in keys_to_remove:
             _MODULE_FORMULA_CACHE.pop(k, None)
             _MODULE_OVERSIZE_FLAGS.pop(k, None)
@@ -218,13 +238,15 @@ def _build_formula_cache(ws_raw: Any, ws_data: Any = None) -> Dict[str, Any]:
     if file_path and Path(file_path).exists():
         cache_key = get_file_cache_key(file_path)
         if cache_key and cache_key in _MODULE_FORMULA_CACHE:
+            _MODULE_FORMULA_CACHE.move_to_end(cache_key)
+            if cache_key in _MODULE_OVERSIZE_FLAGS:
+                _MODULE_OVERSIZE_FLAGS.move_to_end(cache_key)
             cache = dict(_MODULE_FORMULA_CACHE[cache_key])
         else:
             is_oversize = is_file_oversize(file_path)
             cache = _evaluate_workbook_formulas(Path(file_path), is_oversize=is_oversize)
-            if cache_key:
-                _MODULE_FORMULA_CACHE[cache_key] = dict(cache)
-                _MODULE_OVERSIZE_FLAGS[cache_key] = is_oversize
+            if cache_key and temp_wb_path is None:
+                _cache_put(cache_key, dict(cache), is_oversize)
 
     if temp_wb_path and temp_wb_path.exists():
         try:
@@ -615,6 +637,7 @@ def cleanup_stale_sessions(
             try:
                 newest_mtime = _get_newest_mtime(session_dir)
                 if (now - newest_mtime) > max_age_seconds:
+                    invalidate_formula_cache(session_dir)
                     shutil.rmtree(session_dir, ignore_errors=True)
                     removed_workspaces += 1
             except Exception:
@@ -628,6 +651,7 @@ def cleanup_stale_sessions(
             try:
                 newest_mtime = _get_newest_mtime(item) if item.is_dir() else item.stat().st_mtime
                 if (now - newest_mtime) > max_age_seconds:
+                    invalidate_formula_cache(item)
                     if item.is_dir():
                         shutil.rmtree(item, ignore_errors=True)
                     else:

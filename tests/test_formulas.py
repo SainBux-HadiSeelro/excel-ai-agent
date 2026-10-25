@@ -216,3 +216,85 @@ def test_libreoffice_temp_dir_cleanup_on_error(tmp_path, monkeypatch):
     assert len(created_dirs) == 2
     assert not created_dirs[1].exists(), "Temp dir must be deleted on exception"
 
+
+def test_formula_cache_lru_eviction(monkeypatch):
+    import workspace_manager
+    workspace_manager.invalidate_formula_cache()
+    monkeypatch.setattr(workspace_manager, "MAX_CACHE_ENTRIES", 3)
+
+    k1 = ("file1.xlsx", 100, 10)
+    k2 = ("file2.xlsx", 200, 20)
+    k3 = ("file3.xlsx", 300, 30)
+    k4 = ("file4.xlsx", 400, 40)
+
+    workspace_manager._cache_put(k1, {"A": 1}, False)
+    workspace_manager._cache_put(k2, {"B": 2}, False)
+    workspace_manager._cache_put(k3, {"C": 3}, False)
+    assert list(workspace_manager._MODULE_FORMULA_CACHE.keys()) == [k1, k2, k3]
+
+    # Inserting 4th item evicts oldest (k1)
+    workspace_manager._cache_put(k4, {"D": 4}, False)
+    assert k1 not in workspace_manager._MODULE_FORMULA_CACHE
+    assert list(workspace_manager._MODULE_FORMULA_CACHE.keys()) == [k2, k3, k4]
+
+    # Accessing k2 moves it to the end
+    workspace_manager._MODULE_FORMULA_CACHE.move_to_end(k2)
+    assert list(workspace_manager._MODULE_FORMULA_CACHE.keys()) == [k3, k4, k2]
+
+    # Inserting k5 evicts k3 (new oldest)
+    k5 = ("file5.xlsx", 500, 50)
+    workspace_manager._cache_put(k5, {"E": 5}, False)
+    assert k3 not in workspace_manager._MODULE_FORMULA_CACHE
+    assert list(workspace_manager._MODULE_FORMULA_CACHE.keys()) == [k4, k2, k5]
+
+
+def test_cleanup_invalidates_formula_cache_for_deleted_sessions(tmp_path):
+    import time
+    import os
+    import workspace_manager
+
+    ws_root = tmp_path / "workspace"
+    ws_root.mkdir()
+    sess_dir = ws_root / "sess_stale_cache"
+    sess_dir.mkdir()
+    curr_file = sess_dir / "current.xlsx"
+    curr_file.write_text("data")
+
+    # Put entry in cache
+    file_resolved = str(curr_file.resolve())
+    cache_key = (file_resolved, 9999, 123)
+    workspace_manager._cache_put(cache_key, {"VAL": 42}, False)
+    assert cache_key in workspace_manager._MODULE_FORMULA_CACHE
+
+    # Make stale
+    old_time = time.time() - (40 * 3600)
+    os.utime(sess_dir, (old_time, old_time))
+    os.utime(curr_file, (old_time, old_time))
+
+    # Run cleanup
+    workspace_manager.cleanup_stale_sessions(workspace_root=ws_root, temp_uploads_root=tmp_path / "uploads", max_age_hours=24.0)
+
+    # Session deleted and cache invalidated
+    assert not sess_dir.exists()
+    assert cache_key not in workspace_manager._MODULE_FORMULA_CACHE
+
+
+def test_temp_path_evaluations_leave_cache_unchanged():
+    import workspace_manager
+
+    # Clear and snapshot cache keys
+    workspace_manager.invalidate_formula_cache()
+    assert len(workspace_manager._MODULE_FORMULA_CACHE) == 0
+
+    # In-memory workbook without _file_path
+    wb = openpyxl.Workbook()
+    ws = wb.active
+    ws["A1"] = 10
+    ws["A2"] = 20
+    ws["B1"] = "=A1*A2"
+
+    val = workspace_manager.evaluate_formula_cell(ws["B1"].value, None, ws, cell_coord="B1")
+    assert float(val) == 200.0
+    # Cache must still be empty!
+    assert len(workspace_manager._MODULE_FORMULA_CACHE) == 0
+

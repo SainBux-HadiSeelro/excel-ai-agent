@@ -650,7 +650,7 @@ with tab_chat:
                     st.rerun()
 
 
-@st.cache_data
+@st.cache_data(max_entries=50, ttl=3600)
 def load_preview_cached(file_path_str: str, mtime_ns: int, size: int, sheet_name: Optional[str] = None, max_rows: int = 500) -> Tuple[pd.DataFrame, str, bool]:
     """Caches preview dataframe load keyed by (file_path, mtime_ns, size)."""
     return load_sheet_dataframe(file_path_str, sheet_name=sheet_name, max_rows=max_rows)

@@ -27,7 +27,7 @@ st.set_page_config(
     page_title="Excel AI Agent",
     page_icon="📊",
     layout="wide",
-    initial_sidebar_state="expanded"
+    initial_sidebar_state="auto"
 )
 
 # Custom CSS for modern polished interface
@@ -152,6 +152,79 @@ st.markdown("""
         border-radius: 12px;
         padding: 1.2rem;
         margin: 1.2rem 0;
+    }
+
+    /* Mobile Responsiveness & Viewport Optimization */
+    @media (max-width: 768px) {
+        .main .block-container {
+            padding-top: 1rem !important;
+            padding-left: 0.75rem !important;
+            padding-right: 0.75rem !important;
+            padding-bottom: 2.5rem !important;
+        }
+        .hero-banner {
+            padding: 1.2rem 1rem !important;
+            border-radius: 12px !important;
+            margin-bottom: 1rem !important;
+        }
+        .hero-title {
+            font-size: 1.35rem !important;
+            gap: 6px !important;
+        }
+        .hero-subtitle {
+            font-size: 0.85rem !important;
+            margin-top: 4px !important;
+            margin-bottom: 10px !important;
+            line-height: 1.3 !important;
+        }
+        .badge-pill {
+            display: inline-block !important;
+            font-size: 0.7rem !important;
+            padding: 3px 8px !important;
+            margin-bottom: 4px !important;
+            margin-right: 4px !important;
+        }
+        .welcome-container {
+            padding: 1.2rem 1rem !important;
+            border-radius: 12px !important;
+            margin-bottom: 1rem !important;
+        }
+        .feature-card {
+            padding: 0.9rem !important;
+            margin-bottom: 8px !important;
+        }
+        .file-status-bar {
+            font-size: 0.8rem !important;
+            padding: 8px 10px !important;
+            line-height: 1.35 !important;
+            word-break: break-word !important;
+        }
+        .destructive-box {
+            padding: 1rem !important;
+            border-radius: 10px !important;
+        }
+        .stButton > button {
+            min-height: 44px !important;
+            font-size: 0.86rem !important;
+            padding: 8px 10px !important;
+            border-radius: 8px !important;
+        }
+        div[data-testid="stChatMessage"] {
+            padding: 8px 10px !important;
+        }
+        div[data-testid="stChatMessage"] p {
+            font-size: 0.9rem !important;
+            line-height: 1.4 !important;
+        }
+        div[data-testid="stMetricValue"] {
+            font-size: 1.2rem !important;
+        }
+        div[data-testid="stMetricLabel"] {
+            font-size: 0.78rem !important;
+        }
+        div[data-testid="stDataFrame"] {
+            overflow-x: auto !important;
+        }
     }
 </style>
 """, unsafe_allow_html=True)
@@ -392,20 +465,22 @@ with tab_chat:
         </div>
         """, unsafe_allow_html=True)
 
-        # Quick Action Suggestion Chips
+        # Quick Action Suggestion Chips (2x2 grid for mobile & desktop touch friendliness)
         st.markdown("<p style='font-size:0.85rem; font-weight:600; color:#64748B; margin-bottom:6px;'>⚡ QUICK PROMPTS (Click to run):</p>", unsafe_allow_html=True)
-        qcol1, qcol2, qcol3, qcol4 = st.columns(4)
+        qrow1_c1, qrow1_c2 = st.columns(2)
         quick_selected = None
-        with qcol1:
+        with qrow1_c1:
             if st.button("📊 Total sales nikalo", use_container_width=True):
                 quick_selected = "total sales nikalo"
-        with qcol2:
+        with qrow1_c2:
             if st.button("🧹 Duplicates hata do", use_container_width=True):
                 quick_selected = "Order_ID ke hisaab se duplicates hata do"
-        with qcol3:
+
+        qrow2_c1, qrow2_c2 = st.columns(2)
+        with qrow2_c1:
             if st.button("📈 Region ka chart banao", use_container_width=True):
                 quick_selected = "Targets sheet mein region ke hisaab se column chart banao"
-        with qcol4:
+        with qrow2_c2:
             if st.button("✨ Clean Sales Rep text", use_container_width=True):
                 quick_selected = "Sales Rep column D ke extra spaces hatao aur title case kardo"
 

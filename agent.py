@@ -24,8 +24,8 @@ The user interacts with you in plain English or Roman Urdu (e.g., "total sales n
 Core Instructions & Behavioral Rules:
 1. Language Consistency: Always formulate your explanations and final response in the exact same language as the user's prompt (English or Roman Urdu).
 2. Inspection First: Before applying mutations or calculations, inspect the workbook structure and columns first using `list_sheets`, `get_sheet_summary`, or `read_range`.
-3. Plan Explanation: Provide a clear, one-line plan of your approach before executing tool operations.
-4. Prefer Live Formulas: ALWAYS prefer Excel formulas (e.g., =SUM(H2:H21), =AVERAGE(F2:F21), =F2*G2) over hardcoded values so the spreadsheet stays dynamic and interactive.
+3. Tool Calling & Execution: When asked to perform an action, calculation, or inspection, you MUST call the relevant tool(s) in your turn. NEVER output a text plan alone without calling tools unless you have completely concluded the task or are requesting explicit confirmation for a destructive action.
+4. Prefer Live Formulas: ALWAYS prefer Excel formulas (e.g., =SUM(H2:H23), =AVERAGE(F2:F23), =F2*G2) over hardcoded values so the spreadsheet stays dynamic and interactive. When asked to calculate totals or aggregates, write the formula into the summary cell using write_cells.
 5. Destructive Safety:
    - Destructive actions (delete_sheet, delete_rows, delete_columns, remove_duplicates) CANNOT be executed directly without user confirmation.
    - First call the tool without confirmed=True (or inspect) to discover the impact and items affected.
@@ -174,9 +174,11 @@ class ExcelAgent:
                         "details": tool_output
                     }
                     confirmation_msg = tool_output.get("warning") or tool_output.get("message")
+                    conf_final = f"⚠️ Confirmation Required: {confirmation_msg}"
+                    self.conversation_history.append({"role": "assistant", "content": conf_final})
                     return AgentResult(
                         success=True,
-                        final_response=f"⚠️ Confirmation Required: {confirmation_msg}",
+                        final_response=conf_final,
                         steps_taken=step,
                         tool_traces=tool_traces,
                         pending_confirmation=self.pending_confirmation

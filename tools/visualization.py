@@ -73,12 +73,17 @@ def add_chart(
     try:
         min_col, min_row, max_col, max_row = range_boundaries(data_range)
         data_ref = Reference(ws, min_col=min_col, min_row=min_row, max_col=max_col, max_row=max_row)
-        chart.add_data(data_ref, titles_from_data=True)
-
+        # Auto-detect whether data_range contains headers based on category row count
+        titles_from_data = True
         if categories_range:
             c_min_col, c_min_row, c_max_col, c_max_row = range_boundaries(categories_range)
+            cat_rows = c_max_row - c_min_row + 1
+            data_rows = max_row - min_row + 1
+            titles_from_data = (data_rows > cat_rows)
             cats_ref = Reference(ws, min_col=c_min_col, min_row=c_min_row, max_col=c_max_col, max_row=c_max_row)
             chart.set_categories(cats_ref)
+
+        chart.add_data(data_ref, titles_from_data=titles_from_data)
 
         if x_title and hasattr(chart, "x_axis"):
             chart.x_axis.title = x_title

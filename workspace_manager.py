@@ -10,12 +10,93 @@ Guarantees:
 from __future__ import annotations
 
 import os
+import re
 import shutil
 import time
 from pathlib import Path
 from typing import List, Optional, Tuple, Dict, Any
 import openpyxl
 import pandas as pd
+
+
+def evaluate_formula_cell(raw_val: Any, data_val: Any, ws_raw: Any, ws_data: Any = None) -> Any:
+    """Evaluates or extracts formula value if data_only cached value is None."""
+    if data_val is not None and data_val != "":
+        return data_val
+    if raw_val is None:
+        return ""
+    if not isinstance(raw_val, str) or not raw_val.startswith("="):
+        return raw_val
+
+    formula = raw_val[1:].strip()
+
+    # Try simple product: =F2*G2
+    m_mul = re.match(r"^([A-Za-z]+)(\d+)\s*\*\s*([A-Za-z]+)(\d+)$", formula)
+    if m_mul:
+        try:
+            c1, r1, c2, r2 = m_mul.groups()
+            v1 = ws_raw[f"{c1}{r1}"].value or 0
+            v2 = ws_raw[f"{c2}{r2}"].value or 0
+            return float(v1) * float(v2)
+        except Exception:
+            pass
+
+    # Try simple addition: =F2+G2
+    m_add = re.match(r"^([A-Za-z]+)(\d+)\s*\+\s*([A-Za-z]+)(\d+)$", formula)
+    if m_add:
+        try:
+            c1, r1, c2, r2 = m_add.groups()
+            v1 = ws_raw[f"{c1}{r1}"].value or 0
+            v2 = ws_raw[f"{c2}{r2}"].value or 0
+            return float(v1) + float(v2)
+        except Exception:
+            pass
+
+    # Try simple subtraction: =F2-G2
+    m_sub = re.match(r"^([A-Za-z]+)(\d+)\s*\-\s*([A-Za-z]+)(\d+)$", formula)
+    if m_sub:
+        try:
+            c1, r1, c2, r2 = m_sub.groups()
+            v1 = ws_raw[f"{c1}{r1}"].value or 0
+            v2 = ws_raw[f"{c2}{r2}"].value or 0
+            return float(v1) - float(v2)
+        except Exception:
+            pass
+
+    # Try simple division: =F2/G2
+    m_div = re.match(r"^([A-Za-z]+)(\d+)\s*\/\s*([A-Za-z]+)(\d+)$", formula)
+    if m_div:
+        try:
+            c1, r1, c2, r2 = m_div.groups()
+            v1 = ws_raw[f"{c1}{r1}"].value or 0
+            v2 = ws_raw[f"{c2}{r2}"].value or 1
+            return float(v1) / float(v2)
+        except Exception:
+            pass
+
+    # Try SUM: =SUM(H2:H23)
+    m_sum = re.match(r"^SUM\(([A-Za-z]+)(\d+):([A-Za-z]+)(\d+)\)$", formula, re.IGNORECASE)
+    if m_sum:
+        try:
+            from openpyxl.utils.cell import column_index_from_string
+            c1, r1, c2, r2 = m_sum.groups()
+            start_c = column_index_from_string(c1)
+            end_c = column_index_from_string(c2)
+            total = 0.0
+            for r in range(int(r1), int(r2) + 1):
+                for c in range(start_c, end_c + 1):
+                    raw_sub = ws_raw.cell(row=r, column=c).value
+                    data_sub = ws_data.cell(row=r, column=c).value if ws_data else None
+                    sub_val = evaluate_formula_cell(raw_sub, data_sub, ws_raw, ws_data)
+                    try:
+                        total += float(sub_val or 0)
+                    except Exception:
+                        pass
+            return total
+        except Exception:
+            pass
+
+    return raw_val
 
 
 class WorkspaceManager:
@@ -142,16 +223,31 @@ class WorkspaceManager:
         wb.save(path)
 
     def get_sheet_dataframe(self, sheet_name: Optional[str] = None, max_rows: Optional[int] = 500) -> Tuple[pd.DataFrame, str]:
-        """Loads a sheet as a pandas DataFrame for viewing/inspection."""
+        """Loads a sheet as a pandas DataFrame for viewing/inspection, evaluating formulas if unevaluated."""
         path = self.get_current_file_path()
-        xl = pd.ExcelFile(path)
-        target_sheet = sheet_name if sheet_name and sheet_name in xl.sheet_names else xl.sheet_names[0]
-        
-        # Read sheet
-        if max_rows:
-            df = pd.read_excel(path, sheet_name=target_sheet, nrows=max_rows)
-        else:
-            df = pd.read_excel(path, sheet_name=target_sheet)
+        wb_raw = self.open_workbook(data_only=False)
+        wb_data = self.open_workbook(data_only=True)
+        target_sheet = sheet_name if sheet_name and sheet_name in wb_raw.sheetnames else wb_raw.sheetnames[0]
+
+        ws_raw = wb_raw[target_sheet]
+        ws_data = wb_data[target_sheet]
+
+        if ws_raw.max_row == 0 or ws_raw.max_column == 0:
+            return pd.DataFrame(), target_sheet
+
+        headers = [str(ws_raw.cell(row=1, column=c).value or f"Col_{c}") for c in range(1, ws_raw.max_column + 1)]
+
+        limit_rows = min(ws_raw.max_row, (max_rows + 1) if max_rows else ws_raw.max_row)
+        rows_data = []
+        for r in range(2, limit_rows + 1):
+            row = []
+            for c in range(1, ws_raw.max_column + 1):
+                raw_v = ws_raw.cell(row=r, column=c).value
+                data_v = ws_data.cell(row=r, column=c).value
+                row.append(evaluate_formula_cell(raw_v, data_v, ws_raw, ws_data))
+            rows_data.append(row)
+
+        df = pd.DataFrame(rows_data, columns=headers)
         return df, target_sheet
 
     def get_sheet_names(self) -> List[str]:

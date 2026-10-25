@@ -10,7 +10,7 @@ from __future__ import annotations
 from typing import Dict, Any, List, Optional
 import openpyxl
 from openpyxl.utils import get_column_letter
-from workspace_manager import WorkspaceManager
+from workspace_manager import WorkspaceManager, evaluate_formula_cell
 
 
 def list_sheets(manager: WorkspaceManager) -> Dict[str, Any]:
@@ -44,6 +44,7 @@ def read_range(
     Reads a specified range (e.g. 'A1:D20' or entire sheet) with formula visibility and row limiting.
     """
     wb = manager.open_workbook(data_only=not show_formulas)
+    wb_raw = manager.open_workbook(data_only=False) if not show_formulas else None
 
     if cell_range and "!" in cell_range:
         sheet_part, _, range_part = cell_range.rpartition("!")
@@ -58,6 +59,8 @@ def read_range(
         ws = wb[sheet_name]
     else:
         ws = wb.active
+
+    raw_ws = wb_raw[ws.title] if wb_raw else None
 
     if ws.max_row == 0 or ws.max_column == 0:
         return {
@@ -75,7 +78,11 @@ def read_range(
             cells = ws[cell_range]
             # If single cell
             if not isinstance(cells, tuple):
-                val = str(cells.value) if cells.value is not None else ""
+                if not show_formulas and raw_ws:
+                    raw_cell = raw_ws[cells.coordinate]
+                    val = evaluate_formula_cell(raw_cell.value, cells.value, raw_ws, ws)
+                else:
+                    val = cells.value if cells.value is not None else ""
                 return {
                     "sheet_name": ws.title,
                     "cell_range": cell_range,
@@ -84,7 +91,14 @@ def read_range(
                     "truncated": False
                 }
             for row in cells[:max_rows]:
-                extracted_rows.append([c.value if c.value is not None else "" for c in row])
+                row_vals = []
+                for c in row:
+                    if not show_formulas and raw_ws:
+                        raw_c = raw_ws.cell(row=c.row, column=c.column)
+                        row_vals.append(evaluate_formula_cell(raw_c.value, c.value, raw_ws, ws))
+                    else:
+                        row_vals.append(c.value if c.value is not None else "")
+                extracted_rows.append(row_vals)
             truncated = len(cells) > max_rows
         except Exception as e:
             return {"error": f"Invalid range expression '{cell_range}': {str(e)}"}
@@ -96,7 +110,11 @@ def read_range(
             row_data = []
             for c in range(1, limit_cols + 1):
                 val = ws.cell(row=r, column=c).value
-                row_data.append(val if val is not None else "")
+                if not show_formulas and raw_ws:
+                    raw_val = raw_ws.cell(row=r, column=c).value
+                    row_data.append(evaluate_formula_cell(raw_val, val, raw_ws, ws))
+                else:
+                    row_data.append(val if val is not None else "")
             extracted_rows.append(row_data)
         truncated = ws.max_row > max_rows
 
@@ -164,7 +182,10 @@ def get_sheet_summary(
             if v is None or v == "":
                 col_nulls[c_idx] += 1
             else:
-                col_types[c_idx].add(type(v).__name__)
+                if isinstance(v, str) and v.startswith("="):
+                    col_types[c_idx].add("formula")
+                else:
+                    col_types[c_idx].add(type(v).__name__)
 
     columns_info = []
     for i, h in enumerate(headers):

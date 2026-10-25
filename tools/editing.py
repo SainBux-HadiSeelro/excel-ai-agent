@@ -71,6 +71,17 @@ def write_cells(
     manager.prepare_for_mutation("write_cells")
     written_coordinates = []
     for coord, val in validated_updates:
+        # Convert numeric string to int/float so formulas and Excel treat them numerically
+        if isinstance(val, str) and not val.startswith("="):
+            clean_num = val.strip().replace(",", "")
+            try:
+                if "." in clean_num or "e" in clean_num.lower():
+                    val = float(clean_num)
+                else:
+                    val = int(clean_num)
+            except (ValueError, TypeError):
+                pass
+
         # Write value or formula
         ws[coord] = val
         written_coordinates.append(coord)

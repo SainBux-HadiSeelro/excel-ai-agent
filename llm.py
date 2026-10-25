@@ -24,7 +24,7 @@ load_dotenv()
 # Single source of truth for the default Gemini model.
 # Override with the GEMINI_MODEL environment variable if needed.
 DEFAULT_GEMINI_MODEL = "gemini-2.5-flash"
-FALLBACK_GEMINI_MODEL = "gemini-2.5-flash"
+FALLBACK_GEMINI_MODEL = "gemini-1.5-flash"
 
 
 @dataclass
@@ -394,8 +394,9 @@ class GeminiProvider(BaseLLMProvider):
                                 "args": fn_args
                             }
                         })
-                if parts:
-                    contents.append({"role": "model", "parts": parts})
+                if not parts:
+                    parts.append({"text": "Proceeding with request."})
+                contents.append({"role": "model", "parts": parts})
             elif role == "tool":
                 # Function response part (Gemini expects role 'user' with functionResponse)
                 tool_name = m.get("name", "tool_result")
@@ -420,8 +421,16 @@ class GeminiProvider(BaseLLMProvider):
                         "parts": [func_part]
                     })
 
+        # Merge adjacent turns with identical roles to strictly satisfy Gemini alternating turn requirement
+        normalized_contents = []
+        for c in contents:
+            if normalized_contents and normalized_contents[-1]["role"] == c["role"]:
+                normalized_contents[-1]["parts"].extend(c["parts"])
+            else:
+                normalized_contents.append(c)
+
         payload: Dict[str, Any] = {
-            "contents": contents,
+            "contents": normalized_contents,
             "generationConfig": {"temperature": temperature}
         }
         if system_instruction:
@@ -551,10 +560,20 @@ class MockProvider(BaseLLMProvider):
                         content="Executing confirmed duplicate removal.",
                         tool_calls=[ToolCall(id=str(uuid.uuid4()), name="remove_duplicates", arguments={"sheet_name": "Sales", "subset_columns": ["Order_ID"], "confirmed": True})]
                     )
-                elif "delete" in last_user_msg and "sheet" in last_user_msg:
+                elif "sheet" in last_user_msg:
                     return LLMResponse(
                         content="Executing confirmed sheet deletion.",
                         tool_calls=[ToolCall(id=str(uuid.uuid4()), name="delete_sheet", arguments={"title": "Targets", "confirmed": True})]
+                    )
+                elif "row" in last_user_msg:
+                    return LLMResponse(
+                        content="Executing confirmed row deletion.",
+                        tool_calls=[ToolCall(id=str(uuid.uuid4()), name="delete_rows", arguments={"sheet_name": "Sales", "row_idx": 2, "count": 1, "confirmed": True})]
+                    )
+                elif "col" in last_user_msg:
+                    return LLMResponse(
+                        content="Executing confirmed column deletion.",
+                        tool_calls=[ToolCall(id=str(uuid.uuid4()), name="delete_columns", arguments={"sheet_name": "Sales", "col_idx": "B", "count": 1, "confirmed": True})]
                     )
                 else:
                     return LLMResponse(

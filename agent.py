@@ -74,7 +74,19 @@ class ExcelAgent:
         self.conversation_history: List[Dict[str, Any]] = [
             {"role": "system", "content": SYSTEM_PROMPT}
         ]
+        self._current_run_user_idx: Optional[int] = None
         self.pending_confirmation: Optional[Dict[str, Any]] = None
+
+    def _get_current_run_user_idx(self) -> int:
+        """Returns the index of the user message that started the current run."""
+        if self._current_run_user_idx is not None and 0 <= self._current_run_user_idx < len(self.conversation_history):
+            if self.conversation_history[self._current_run_user_idx].get("role") == "user":
+                return self._current_run_user_idx
+        # Fallback: scan backwards for the latest user message
+        for i in range(len(self.conversation_history) - 1, 0, -1):
+            if self.conversation_history[i].get("role") == "user":
+                return i
+        return 1 if len(self.conversation_history) > 1 else 0
 
     def _format_tool_result_for_history(self, tool_output: Dict[str, Any], max_chars: int = 4000) -> str:
         """Serializes tool output for LLM history, truncating large results to conserve tokens."""
@@ -108,36 +120,43 @@ class ExcelAgent:
         return raw_str[:max_chars] + f"\n... [truncated, {omitted} characters omitted]"
 
     def _trim_conversation_history(self) -> None:
-        """Caps conversation history length while preserving system prompt and turn atomicity."""
+        """Caps conversation history length while preserving system prompt, turn atomicity,
+        and ensuring the first non-system message is always a user message.
+        Never drops the user message that started the current run.
+        """
         if len(self.conversation_history) <= self.max_history_messages:
             return
 
         system_msg = self.conversation_history[0]
-        tail_candidates = self.conversation_history[1:]
+        user_idx = self._get_current_run_user_idx()
 
-        target_len = self.max_history_messages - 1
-        start_idx = max(0, len(tail_candidates) - target_len)
+        current_run_messages = self.conversation_history[user_idx:]
 
-        # Find safe boundary (a user message) so tool messages are never separated from assistant tool_calls
-        boundary_idx = None
-        for idx in range(start_idx, len(tail_candidates)):
-            if tail_candidates[idx].get("role") == "user":
-                boundary_idx = idx
+        # If current run alone meets or exceeds the cap, keep system prompt + all current run messages
+        if len(current_run_messages) + 1 >= self.max_history_messages:
+            self.conversation_history = [system_msg] + current_run_messages
+            self._current_run_user_idx = 1
+            return
+
+        # Otherwise, keep as many older messages as will fit under allowed_older
+        older_messages = self.conversation_history[1:user_idx]
+        allowed_older = self.max_history_messages - 1 - len(current_run_messages)
+
+        # First kept older message must be a user message (so first non-system message is user)
+        cutoff = max(0, len(older_messages) - allowed_older)
+        kept_older_idx = None
+        for idx in range(cutoff, len(older_messages)):
+            if older_messages[idx].get("role") == "user":
+                kept_older_idx = idx
                 break
 
-        # Fallback: if no user message found forward, search backward or avoid starting on a tool message
-        if boundary_idx is None:
-            boundary_idx = start_idx
-            while boundary_idx < len(tail_candidates) and tail_candidates[boundary_idx].get("role") == "tool":
-                boundary_idx += 1
+        if kept_older_idx is not None:
+            kept_older = older_messages[kept_older_idx:]
+        else:
+            kept_older = []
 
-        if boundary_idx >= len(tail_candidates):
-            boundary_idx = max(0, len(tail_candidates) - 4)
-            while boundary_idx < len(tail_candidates) and tail_candidates[boundary_idx].get("role") == "tool":
-                boundary_idx += 1
-
-        trimmed_tail = tail_candidates[boundary_idx:]
-        self.conversation_history = [system_msg] + trimmed_tail
+        self.conversation_history = [system_msg] + kept_older + current_run_messages
+        self._current_run_user_idx = 1 + len(kept_older)
 
     def run(
         self,
@@ -148,7 +167,8 @@ class ExcelAgent:
         Executes a user instruction through the tool-calling loop.
         Caps execution at max_steps (default 15).
         """
-        # Append user message
+        # Append user message and record current run index
+        self._current_run_user_idx = len(self.conversation_history)
         self.conversation_history.append({"role": "user", "content": user_instruction})
         tool_traces: List[ToolExecutionTrace] = []
 

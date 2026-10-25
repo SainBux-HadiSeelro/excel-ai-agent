@@ -204,4 +204,33 @@ def test_agent_model_not_found_guidance(sample_manager):
     assert "retired-model-id" in res.final_response
 
 
+def test_agent_history_trimming_preserves_current_run_user_message(sample_manager):
+    # Mock LLM that performs 14 tool-call steps, then completes on step 15
+    responses = [
+        LLMResponse(content=f"Listing sheets step {i}", tool_calls=[ToolCall(id=f"tc-{i}", name="list_sheets", arguments={})])
+        for i in range(14)
+    ]
+    responses.append(LLMResponse(content="Completed all 14 tool steps", tool_calls=[]))
+    mock_llm = MockProvider(responses)
+
+    # Set max_steps=15 and a tight history limit (max_history_messages=10)
+    agent = ExcelAgent(manager=sample_manager, provider=mock_llm, max_steps=15, max_history_messages=10)
+    user_prompt = "Execute 14 tool steps consecutively"
+    res = agent.run(user_prompt)
+
+    assert res.success is True
+    assert res.steps_taken == 15
+
+    # Original user message must still be present
+    assert agent.conversation_history[0]["role"] == "system"
+    assert agent.conversation_history[1]["role"] == "user"
+    assert agent.conversation_history[1]["content"] == user_prompt
+
+    # Anthropic/Gemini requirement: first non-system message must be a user message
+    non_system_roles = [m["role"] for m in agent.conversation_history[1:]]
+    assert non_system_roles[0] == "user"
+    assert non_system_roles[0] != "assistant"
+    assert non_system_roles[0] != "tool"
+
+
 

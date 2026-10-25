@@ -21,7 +21,7 @@ from dotenv import load_dotenv
 # Ensure local imports work
 sys.path.insert(0, str(Path(__file__).parent.resolve()))
 
-from workspace_manager import WorkspaceManager, cleanup_stale_sessions
+from workspace_manager import WorkspaceManager, cleanup_stale_sessions, load_sheet_dataframe
 from llm import get_llm_provider, GeminiProvider, OpenAIProvider, AnthropicProvider, DEFAULT_GEMINI_MODEL
 from agent import ExcelAgent, ToolExecutionTrace
 
@@ -650,6 +650,12 @@ with tab_chat:
                     st.rerun()
 
 
+@st.cache_data
+def load_preview_cached(file_path_str: str, mtime_ns: int, size: int, sheet_name: Optional[str] = None, max_rows: int = 500) -> Tuple[pd.DataFrame, str, bool]:
+    """Caches preview dataframe load keyed by (file_path, mtime_ns, size)."""
+    return load_sheet_dataframe(file_path_str, sheet_name=sheet_name, max_rows=max_rows)
+
+
 # TAB 2: Sheet Preview
 with tab_preview:
     if not st.session_state.file_loaded:
@@ -664,7 +670,19 @@ with tab_preview:
             st.write(f"📁 **{st.session_state.current_file_name}**")
 
         try:
-            df, active_s = st.session_state.manager.get_sheet_dataframe(sheet_name=selected_sheet, max_rows=500)
+            curr_path = st.session_state.manager.get_current_file_path()
+            curr_stat = Path(curr_path).stat()
+            df, active_s, is_oversize = load_preview_cached(
+                str(Path(curr_path).resolve()),
+                curr_stat.st_mtime_ns,
+                curr_stat.st_size,
+                sheet_name=selected_sheet,
+                max_rows=500
+            )
+
+            if is_oversize:
+                st.info("ℹ️ **Large workbook (>20,000 cells):** Pure-Python formula evaluation is skipped to preserve responsiveness. Showing raw formulas and basic operations.")
+
             df = df.convert_dtypes()
             for col in df.columns:
                 if df[col].dtype == object:

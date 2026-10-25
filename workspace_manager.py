@@ -27,12 +27,109 @@ try:
 except ImportError:
     HAS_FORMULAS = False
 
+_MODULE_FORMULA_CACHE: Dict[Tuple[str, int, int], Dict[str, Any]] = {}
+_MODULE_OVERSIZE_FLAGS: Dict[Tuple[str, int, int], bool] = {}
+FORMULA_CELL_LIMIT = 20000
+
+
+def get_file_cache_key(file_path: str | Path) -> Optional[Tuple[str, int, int]]:
+    """Generates cache key: (resolved_path, mtime_ns, size)."""
+    try:
+        p = Path(file_path).resolve()
+        if not p.exists():
+            return None
+        st = p.stat()
+        return (str(p), st.st_mtime_ns, st.st_size)
+    except Exception:
+        return None
+
+
+def invalidate_formula_cache(file_path: Optional[str | Path] = None) -> None:
+    """Invalidates formula cache entries for a specific path, or all entries if None."""
+    global _MODULE_FORMULA_CACHE, _MODULE_OVERSIZE_FLAGS
+    if file_path is None:
+        _MODULE_FORMULA_CACHE.clear()
+        _MODULE_OVERSIZE_FLAGS.clear()
+    else:
+        resolved = str(Path(file_path).resolve())
+        keys_to_remove = [k for k in _MODULE_FORMULA_CACHE if k[0] == resolved]
+        for k in keys_to_remove:
+            _MODULE_FORMULA_CACHE.pop(k, None)
+            _MODULE_OVERSIZE_FLAGS.pop(k, None)
+
+
+def count_non_empty_cells(wb: openpyxl.Workbook, limit: Optional[int] = None) -> int:
+    """Counts non-empty cells across all worksheets up to limit + 1."""
+    if limit is None:
+        limit = FORMULA_CELL_LIMIT
+    count = 0
+    for s in wb.worksheets:
+        for row in s.iter_rows(values_only=True):
+            for v in row:
+                if v is not None and v != "":
+                    count += 1
+                    if count > limit:
+                        return count
+    return count
+
+
+def is_file_oversize(file_path: str | Path, limit: Optional[int] = None) -> bool:
+    """Checks if the workbook at file_path has > limit non-empty cells."""
+    if limit is None:
+        limit = FORMULA_CELL_LIMIT
+    key = get_file_cache_key(file_path)
+    if key and key in _MODULE_OVERSIZE_FLAGS:
+        return _MODULE_OVERSIZE_FLAGS[key]
+    try:
+        p = Path(file_path).resolve()
+        if not p.exists():
+            return False
+        wb = openpyxl.load_workbook(p, data_only=True, read_only=True)
+        count = count_non_empty_cells(wb, limit=limit)
+        wb.close()
+        is_over = count > limit
+        if key:
+            _MODULE_OVERSIZE_FLAGS[key] = is_over
+        return is_over
+    except Exception:
+        return False
+
+
+def _normalize_eval_value(v: Any) -> Any:
+    """Normalizes evaluated formula values to standard JSON/DataFrame safe types."""
+    if v is None:
+        return ""
+    if hasattr(v, "item"):
+        try:
+            v = v.item()
+        except Exception:
+            pass
+    if hasattr(v, "tolist"):
+        v = v.tolist()
+    while isinstance(v, list) and len(v) == 1:
+        v = v[0]
+
+    v_str = str(v)
+    if v_str.startswith("#") and any(err in v_str for err in ["#DIV/0!", "#N/A", "#VALUE!", "#REF!", "#NAME?", "#NUM!", "#NULL!"]):
+        return v_str
+
+    if isinstance(v, bool):
+        return v
+    if isinstance(v, int):
+        return v
+    if isinstance(v, float):
+        if v != v or abs(v) == float("inf"):
+            return "#NUM!"
+        return v
+    return v_str
+
 
 def _evaluate_with_libreoffice(file_path: Path) -> Optional[Path]:
     """Headless LibreOffice recalculation fallback if LibreOffice is available on PATH."""
     soffice = shutil.which("soffice") or shutil.which("libreoffice")
     if not soffice:
         return None
+    temp_dir = None
     try:
         temp_dir = tempfile.mkdtemp(prefix="libreoffice_recalc_")
         cmd = [soffice, "--headless", "--convert-to", "xlsx", "--outdir", temp_dir, str(file_path)]
@@ -41,13 +138,67 @@ def _evaluate_with_libreoffice(file_path: Path) -> Optional[Path]:
             out_file = Path(temp_dir) / file_path.name
             if out_file.exists():
                 return out_file
+        # Clean up temp_dir on non-zero return code or missing out_file
+        if temp_dir and Path(temp_dir).exists():
+            shutil.rmtree(temp_dir, ignore_errors=True)
     except Exception:
-        pass
+        if temp_dir and Path(temp_dir).exists():
+            shutil.rmtree(temp_dir, ignore_errors=True)
     return None
 
 
+def _run_pure_python_formulas(file_path: Path) -> Dict[str, Any]:
+    """Evaluates formulas in an Excel file using the formulas library."""
+    cache: Dict[str, Any] = {}
+    if not HAS_FORMULAS:
+        return cache
+    try:
+        model = formulas.ExcelModel().loads(str(file_path)).finish()
+        calc_res = model.calculate()
+        for k, cell_obj in calc_res.items():
+            m = re.search(r"\]([^']+)'!([A-Za-z0-9:]+)", str(k))
+            if m:
+                sheet_name, coord = m.groups()
+                v = getattr(cell_obj, "value", cell_obj)
+                cache[f"{sheet_name.upper()}!{coord.upper()}"] = _normalize_eval_value(v)
+    except Exception:
+        pass
+    return cache
+
+
+def _evaluate_workbook_formulas(file_path: Path, is_oversize: bool = False) -> Dict[str, Any]:
+    """Evaluates formulas across a workbook using LibreOffice or pure-Python formulas library."""
+    cache: Dict[str, Any] = {}
+    # 1. LibreOffice headless recalculation if available
+    recalc_path = _evaluate_with_libreoffice(file_path)
+    if recalc_path and recalc_path.exists():
+        try:
+            recalc_wb = openpyxl.load_workbook(recalc_path, data_only=True)
+            for sheet_name in recalc_wb.sheetnames:
+                s_calc = recalc_wb[sheet_name]
+                for r in range(1, s_calc.max_row + 1):
+                    for c in range(1, s_calc.max_column + 1):
+                        v = s_calc.cell(row=r, column=c).value
+                        if v is not None:
+                            coord = f"{get_column_letter(c)}{r}"
+                            cache[f"{sheet_name.upper()}!{coord}"] = _normalize_eval_value(v)
+        except Exception:
+            pass
+        finally:
+            try:
+                shutil.rmtree(recalc_path.parent, ignore_errors=True)
+            except Exception:
+                pass
+
+    # 2. Pure-Python formulas library evaluator (skipped if oversize)
+    if not cache and HAS_FORMULAS and not is_oversize:
+        cache = _run_pure_python_formulas(file_path)
+
+    return cache
+
+
 def _build_formula_cache(ws_raw: Any, ws_data: Any = None) -> Dict[str, Any]:
-    """Pre-calculates formulas in a workbook using LibreOffice or formulas library."""
+    """Pre-calculates formulas in a workbook using module cache, LibreOffice, or formulas library."""
     cache: Dict[str, Any] = {}
     wb = getattr(ws_raw, "parent", None)
     if not wb:
@@ -65,46 +216,15 @@ def _build_formula_cache(ws_raw: Any, ws_data: Any = None) -> Dict[str, Any]:
             file_path = None
 
     if file_path and Path(file_path).exists():
-        # 1. LibreOffice headless recalculation if available
-        recalc_path = _evaluate_with_libreoffice(Path(file_path))
-        if recalc_path and recalc_path.exists():
-            try:
-                recalc_wb = openpyxl.load_workbook(recalc_path, data_only=True)
-                for sheet_name in recalc_wb.sheetnames:
-                    s_calc = recalc_wb[sheet_name]
-                    for r in range(1, s_calc.max_row + 1):
-                        for c in range(1, s_calc.max_column + 1):
-                            v = s_calc.cell(row=r, column=c).value
-                            if v is not None:
-                                coord = f"{get_column_letter(c)}{r}"
-                                cache[f"{sheet_name.upper()}!{coord}"] = v
-            except Exception:
-                pass
-            finally:
-                try:
-                    shutil.rmtree(recalc_path.parent, ignore_errors=True)
-                except Exception:
-                    pass
-
-        # 2. Pure-Python formulas library evaluator
-        if not cache and HAS_FORMULAS:
-            try:
-                model = formulas.ExcelModel().loads(str(file_path)).finish()
-                calc_res = model.calculate()
-                for k, cell_obj in calc_res.items():
-                    m = re.search(r"\]([^']+)'!([A-Za-z0-9:]+)", str(k))
-                    if m:
-                        sheet_name, coord = m.groups()
-                        v = getattr(cell_obj, "value", cell_obj)
-                        if hasattr(v, "tolist"):
-                            v = v.tolist()
-                        while isinstance(v, list) and len(v) == 1:
-                            v = v[0]
-                        if hasattr(v, "item"):
-                            v = v.item()
-                        cache[f"{sheet_name.upper()}!{coord.upper()}"] = v
-            except Exception:
-                pass
+        cache_key = get_file_cache_key(file_path)
+        if cache_key and cache_key in _MODULE_FORMULA_CACHE:
+            cache = dict(_MODULE_FORMULA_CACHE[cache_key])
+        else:
+            is_oversize = is_file_oversize(file_path)
+            cache = _evaluate_workbook_formulas(Path(file_path), is_oversize=is_oversize)
+            if cache_key:
+                _MODULE_FORMULA_CACHE[cache_key] = dict(cache)
+                _MODULE_OVERSIZE_FLAGS[cache_key] = is_oversize
 
     if temp_wb_path and temp_wb_path.exists():
         try:
@@ -201,10 +321,18 @@ def evaluate_formula_cell(
         try:
             c1, r1, c2, r2 = m_div.groups()
             v1 = ws_raw[f"{c1}{r1}"].value or 0
-            v2 = ws_raw[f"{c2}{r2}"].value or 1
+            v2 = ws_raw[f"{c2}{r2}"].value
+            if v2 is None or v2 == 0 or float(v2) == 0:
+                return "#DIV/0!"
             return float(v1) / float(v2)
+        except ZeroDivisionError:
+            return "#DIV/0!"
         except Exception:
             pass
+
+    # Try NA(): =NA()
+    if formula.upper() == "NA()":
+        return "#N/A"
 
     # Try SUM: =SUM(H2:H23)
     m_sum = re.match(r"^SUM\(([A-Za-z]+)(\d+):([A-Za-z]+)(\d+)\)$", formula, re.IGNORECASE)
@@ -230,6 +358,44 @@ def evaluate_formula_cell(
 
     # 3. Last fallback: never crash, return raw formula
     return raw_val
+
+
+def load_sheet_dataframe(
+    file_path: str | Path,
+    sheet_name: Optional[str] = None,
+    max_rows: Optional[int] = 500
+) -> Tuple[pd.DataFrame, str, bool]:
+    """Loads a sheet as a pandas DataFrame, evaluating formulas, with oversize workbook detection."""
+    p = Path(file_path).resolve()
+    wb_raw = openpyxl.load_workbook(p, data_only=False)
+    wb_raw._file_path = p
+    wb_data = openpyxl.load_workbook(p, data_only=True)
+    wb_data._file_path = p
+    target_sheet = sheet_name if sheet_name and sheet_name in wb_raw.sheetnames else wb_raw.sheetnames[0]
+
+    ws_raw = wb_raw[target_sheet]
+    ws_data = wb_data[target_sheet]
+
+    is_oversize = is_file_oversize(p)
+
+    if ws_raw.max_row == 0 or ws_raw.max_column == 0:
+        return pd.DataFrame(), target_sheet, is_oversize
+
+    headers = [str(ws_raw.cell(row=1, column=c).value or f"Col_{c}") for c in range(1, ws_raw.max_column + 1)]
+
+    limit_rows = min(ws_raw.max_row, (max_rows + 1) if max_rows else ws_raw.max_row)
+    rows_data = []
+    for r in range(2, limit_rows + 1):
+        row = []
+        for c in range(1, ws_raw.max_column + 1):
+            raw_v = ws_raw.cell(row=r, column=c).value
+            data_v = ws_data.cell(row=r, column=c).value
+            cell_coord = f"{get_column_letter(c)}{r}"
+            row.append(evaluate_formula_cell(raw_v, data_v, ws_raw, ws_data, cell_coord=cell_coord))
+        rows_data.append(row)
+
+    df = pd.DataFrame(rows_data, columns=headers)
+    return df, target_sheet, is_oversize
 
 
 class WorkspaceManager:
@@ -345,41 +511,25 @@ class WorkspaceManager:
         """
         path = self.get_current_file_path()
         wb = openpyxl.load_workbook(path, data_only=data_only)
-        wb._file_path = Path(path)
+        wb._file_path = Path(path).resolve()
         return wb
 
     def save_workbook(self, wb: openpyxl.Workbook) -> None:
-        """Saves openpyxl Workbook to the current working copy."""
+        """Saves openpyxl Workbook to the current working copy and invalidates formula cache."""
         path = self.get_current_file_path()
         wb.save(path)
+        invalidate_formula_cache(path)
+
+    def is_current_file_oversize(self) -> bool:
+        """Checks if current file has > 20,000 non-empty cells."""
+        if not self.current_file:
+            return False
+        return is_file_oversize(self.current_file)
 
     def get_sheet_dataframe(self, sheet_name: Optional[str] = None, max_rows: Optional[int] = 500) -> Tuple[pd.DataFrame, str]:
         """Loads a sheet as a pandas DataFrame for viewing/inspection, evaluating formulas if unevaluated."""
         path = self.get_current_file_path()
-        wb_raw = self.open_workbook(data_only=False)
-        wb_data = self.open_workbook(data_only=True)
-        target_sheet = sheet_name if sheet_name and sheet_name in wb_raw.sheetnames else wb_raw.sheetnames[0]
-
-        ws_raw = wb_raw[target_sheet]
-        ws_data = wb_data[target_sheet]
-
-        if ws_raw.max_row == 0 or ws_raw.max_column == 0:
-            return pd.DataFrame(), target_sheet
-
-        headers = [str(ws_raw.cell(row=1, column=c).value or f"Col_{c}") for c in range(1, ws_raw.max_column + 1)]
-
-        limit_rows = min(ws_raw.max_row, (max_rows + 1) if max_rows else ws_raw.max_row)
-        rows_data = []
-        for r in range(2, limit_rows + 1):
-            row = []
-            for c in range(1, ws_raw.max_column + 1):
-                raw_v = ws_raw.cell(row=r, column=c).value
-                data_v = ws_data.cell(row=r, column=c).value
-                cell_coord = f"{get_column_letter(c)}{r}"
-                row.append(evaluate_formula_cell(raw_v, data_v, ws_raw, ws_data, cell_coord=cell_coord))
-            rows_data.append(row)
-
-        df = pd.DataFrame(rows_data, columns=headers)
+        df, target_sheet, _ = load_sheet_dataframe(path, sheet_name=sheet_name, max_rows=max_rows)
         return df, target_sheet
 
     def get_sheet_names(self) -> List[str]:

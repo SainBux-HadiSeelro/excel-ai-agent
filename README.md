@@ -19,7 +19,13 @@
 
 </div>
 
-A complete, production-quality autonomous AI Agent in Python that interprets plain language instructions in **English** and **Roman Urdu** (e.g., *"total sales nikalo"*, *"duplicates hata do"*, *"region ke hisaab se chart banao"*, *"do files merge karo"*) and executes them safely and reliably on Excel (`.xlsx`) files.
+## 📖 About the Project & Live Demo
+
+**Excel AI Agent** is a production-quality autonomous spreadsheet assistant in Python that interprets natural language instructions in **English** and **Roman Urdu** (e.g., *"total sales nikalo"*, *"duplicates hata do"*, *"region ke hisaab se chart banao"*, *"do files merge karo"*) and executes them safely and reliably on Excel (`.xlsx`) files.
+
+- 🌐 **Live Web App**: [https://excel-agent-ai.streamlit.app/](https://excel-agent-ai.streamlit.app/)
+- 🚀 **Instant Evaluation**: No installation or local setup required—open the link, upload your workbook or click "Load Sample Data", and start chatting with the agent immediately.
+- 🛡️ **Safe & Non-Destructive**: Isolated workspace with automatic snapshots, one-click undo, and confirmation guards for deletions.
 
 ---
 

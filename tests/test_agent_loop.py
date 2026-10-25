@@ -123,3 +123,69 @@ def test_agent_destructive_cancel_makes_no_changes(sample_manager):
     assert "Targets" in sample_manager.get_sheet_names()
     assert agent.pending_confirmation is None
 
+
+def test_agent_truncates_large_tool_output(sample_manager):
+    # Mock LLM calling read_range with many rows
+    mock_llm = MockProvider([
+        LLMResponse(
+            content="Reading range",
+            tool_calls=[ToolCall(id="tc-read", name="read_range", arguments={"sheet_name": "Sales", "max_rows": 50})]
+        ),
+        LLMResponse(
+            content="Done reading.",
+            tool_calls=[]
+        )
+    ])
+
+    agent = ExcelAgent(manager=sample_manager, provider=mock_llm)
+    # Test formatting logic directly
+    huge_rows = [[f"value_{r}_{c}" for c in range(20)] for r in range(200)]
+    huge_output = {"sheet_name": "Sales", "rows": huge_rows, "total_rows": 200}
+    formatted = agent._format_tool_result_for_history(huge_output, max_chars=1000)
+
+    assert len(formatted) <= 1200
+    assert "...truncated" in formatted
+    assert "rows omitted" in formatted
+
+    # Run agent and verify trace keeps full data while history is bounded
+    res = agent.run("Read lots of data")
+    assert res.success is True
+    assert len(res.tool_traces) == 1
+    # Trace result preserves actual row count
+    assert len(res.tool_traces[0].result["rows"]) > 0
+
+
+def test_agent_history_cap_boundary(sample_manager):
+    mock_llm = MockProvider([
+        LLMResponse(content="Step 1 done", tool_calls=[]),
+        LLMResponse(content="Step 2 done", tool_calls=[]),
+        LLMResponse(content="Step 3 done", tool_calls=[]),
+        LLMResponse(content="Step 4 done", tool_calls=[]),
+    ])
+
+    # Cap history at small number of messages
+    agent = ExcelAgent(manager=sample_manager, provider=mock_llm, max_history_messages=5)
+    agent.run("Turn 1")
+    agent.run("Turn 2")
+    agent.run("Turn 3")
+
+    assert len(agent.conversation_history) <= 5
+    assert agent.conversation_history[0]["role"] == "system"
+
+
+def test_agent_max_steps_custom_limit(sample_manager):
+    # Mock LLM that continuously calls a tool without finishing
+    continuous_responses = [
+        LLMResponse(content=f"Step {i}", tool_calls=[ToolCall(id=f"tc-{i}", name="list_sheets", arguments={})])
+        for i in range(10)
+    ]
+    mock_llm = MockProvider(continuous_responses)
+
+    agent = ExcelAgent(manager=sample_manager, provider=mock_llm, max_steps=4)
+    res = agent.run("Infinite loop test")
+
+    assert res.success is False
+    assert res.steps_taken == 4
+    assert "Agent reached maximum execution step limit (4)" in res.final_response
+
+

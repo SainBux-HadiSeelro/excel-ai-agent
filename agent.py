@@ -64,15 +64,80 @@ class ExcelAgent:
         self,
         manager: WorkspaceManager,
         provider: Optional[BaseLLMProvider] = None,
-        max_steps: int = 15
+        max_steps: int = 15,
+        max_history_messages: int = 25
     ):
         self.manager = manager
         self.provider = provider or get_llm_provider()
         self.max_steps = max_steps
+        self.max_history_messages = max_history_messages
         self.conversation_history: List[Dict[str, Any]] = [
             {"role": "system", "content": SYSTEM_PROMPT}
         ]
         self.pending_confirmation: Optional[Dict[str, Any]] = None
+
+    def _format_tool_result_for_history(self, tool_output: Dict[str, Any], max_chars: int = 4000) -> str:
+        """Serializes tool output for LLM history, truncating large results to conserve tokens."""
+        raw_str = json.dumps(tool_output, default=str)
+        if len(raw_str) <= max_chars:
+            return raw_str
+
+        # If tool returned a list of rows (e.g. read_range), truncate rows progressively
+        if isinstance(tool_output, dict) and "rows" in tool_output and isinstance(tool_output["rows"], list):
+            rows = tool_output["rows"]
+            total_rows = len(rows)
+            low, high = 1, total_rows
+            best_output = tool_output
+            while low <= high:
+                mid = (low + high) // 2
+                cand = dict(tool_output)
+                cand["rows"] = rows[:mid]
+                cand["truncation_note"] = f"...truncated, {total_rows - mid} rows omitted"
+                cand_str = json.dumps(cand, default=str)
+                if len(cand_str) <= max_chars:
+                    best_output = cand
+                    low = mid + 1
+                else:
+                    high = mid - 1
+            serialized = json.dumps(best_output, default=str)
+            if len(serialized) <= max_chars:
+                return serialized
+
+        # Fallback character cap
+        omitted = len(raw_str) - max_chars
+        return raw_str[:max_chars] + f"\n... [truncated, {omitted} characters omitted]"
+
+    def _trim_conversation_history(self) -> None:
+        """Caps conversation history length while preserving system prompt and turn atomicity."""
+        if len(self.conversation_history) <= self.max_history_messages:
+            return
+
+        system_msg = self.conversation_history[0]
+        tail_candidates = self.conversation_history[1:]
+
+        target_len = self.max_history_messages - 1
+        start_idx = max(0, len(tail_candidates) - target_len)
+
+        # Find safe boundary (a user message) so tool messages are never separated from assistant tool_calls
+        boundary_idx = None
+        for idx in range(start_idx, len(tail_candidates)):
+            if tail_candidates[idx].get("role") == "user":
+                boundary_idx = idx
+                break
+
+        # Fallback: if no user message found forward, search backward or avoid starting on a tool message
+        if boundary_idx is None:
+            boundary_idx = start_idx
+            while boundary_idx < len(tail_candidates) and tail_candidates[boundary_idx].get("role") == "tool":
+                boundary_idx += 1
+
+        if boundary_idx >= len(tail_candidates):
+            boundary_idx = max(0, len(tail_candidates) - 4)
+            while boundary_idx < len(tail_candidates) and tail_candidates[boundary_idx].get("role") == "tool":
+                boundary_idx += 1
+
+        trimmed_tail = tail_candidates[boundary_idx:]
+        self.conversation_history = [system_msg] + trimmed_tail
 
     def run(
         self,
@@ -115,6 +180,7 @@ class ExcelAgent:
             # If no tools called, we've reached a final response
             if not response.tool_calls:
                 self.conversation_history.append({"role": "assistant", "content": response.content or ""})
+                self._trim_conversation_history()
                 return AgentResult(
                     success=True,
                     final_response=final_text,
@@ -158,13 +224,15 @@ class ExcelAgent:
                 if on_step:
                     on_step(step, tc.name, tc.arguments, tool_output)
 
-                # Append tool result to history
+                # Append tool result to history (truncated for LLM if large)
+                tool_history_content = self._format_tool_result_for_history(tool_output)
                 self.conversation_history.append({
                     "role": "tool",
                     "tool_call_id": tc.id,
                     "name": tc.name,
-                    "content": json.dumps(tool_output, default=str)
+                    "content": tool_history_content
                 })
+                self._trim_conversation_history()
 
                 # Check if this requires user confirmation
                 if tool_output.get("requires_confirmation"):
@@ -176,6 +244,7 @@ class ExcelAgent:
                     confirmation_msg = tool_output.get("warning") or tool_output.get("message")
                     conf_final = f"⚠️ Confirmation Required: {confirmation_msg}"
                     self.conversation_history.append({"role": "assistant", "content": conf_final})
+                    self._trim_conversation_history()
                     return AgentResult(
                         success=True,
                         final_response=conf_final,
@@ -186,7 +255,7 @@ class ExcelAgent:
 
         return AgentResult(
             success=False,
-            final_response="Agent reached maximum execution step limit (15) without concluding.",
+            final_response=f"Agent reached maximum execution step limit ({self.max_steps}) without concluding.",
             steps_taken=step,
             tool_traces=tool_traces,
             error="Max steps exceeded"
@@ -254,7 +323,7 @@ class ExcelAgent:
             "role": "tool",
             "tool_call_id": call_id,
             "name": tool_name,
-            "content": json.dumps(tool_output, default=str)
+            "content": self._format_tool_result_for_history(tool_output)
         })
 
         if tool_output.get("error"):
@@ -268,6 +337,7 @@ class ExcelAgent:
             "role": "assistant",
             "content": summary
         })
+        self._trim_conversation_history()
 
         return AgentResult(
             success=success,

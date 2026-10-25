@@ -69,3 +69,57 @@ def test_agent_error_recovery(sample_manager):
     assert len(result.tool_traces) == 2
     assert result.tool_traces[0].error is not None
     assert result.tool_traces[1].error is None
+
+
+def test_agent_destructive_confirm_execution(sample_manager):
+    from tools.structure import create_sheet
+    create_sheet(sample_manager, title="MyCustomSheet")
+    assert "MyCustomSheet" in sample_manager.get_sheet_names()
+
+    # LLM attempts to delete sheet MyCustomSheet without confirmed
+    mock_llm = MockProvider([
+        LLMResponse(
+            content="I will delete sheet MyCustomSheet.",
+            tool_calls=[ToolCall(id="tc-del", name="delete_sheet", arguments={"title": "MyCustomSheet", "confirmed": False})]
+        )
+    ])
+
+    agent = ExcelAgent(manager=sample_manager, provider=mock_llm)
+    result = agent.run("Delete MyCustomSheet sheet")
+    assert result.pending_confirmation is not None
+    assert result.pending_confirmation["arguments"]["title"] == "MyCustomSheet"
+    assert "MyCustomSheet" in sample_manager.get_sheet_names()
+
+    steps_tracked = []
+    def on_step_cb(step, tool_name, args, res):
+        steps_tracked.append((tool_name, args, res))
+
+    res = agent.confirm_and_resume(confirmed=True, on_step=on_step_cb)
+    assert res.success is True
+    # The stored arguments (MyCustomSheet) must be executed, not Targets!
+    assert "MyCustomSheet" not in sample_manager.get_sheet_names()
+    assert len(res.tool_traces) == 1
+    assert res.tool_traces[0].arguments == {"title": "MyCustomSheet", "confirmed": True}
+    assert len(steps_tracked) == 1
+    assert steps_tracked[0][1] == {"title": "MyCustomSheet", "confirmed": True}
+
+
+def test_agent_destructive_cancel_makes_no_changes(sample_manager):
+    mock_llm = MockProvider([
+        LLMResponse(
+            content="I will delete sheet Targets.",
+            tool_calls=[ToolCall(id="tc-del", name="delete_sheet", arguments={"title": "Targets", "confirmed": False})]
+        )
+    ])
+
+    agent = ExcelAgent(manager=sample_manager, provider=mock_llm)
+    result = agent.run("Delete Targets sheet")
+    assert result.pending_confirmation is not None
+    assert "Targets" in sample_manager.get_sheet_names()
+
+    res = agent.confirm_and_resume(confirmed=False)
+    assert res.success is True
+    assert "cancelled" in res.final_response.lower()
+    assert "Targets" in sample_manager.get_sheet_names()
+    assert agent.pending_confirmation is None
+

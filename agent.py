@@ -205,14 +205,73 @@ class ExcelAgent:
                 steps_taken=0
             )
 
-        tool_name = self.pending_confirmation["tool_name"]
+        pending = self.pending_confirmation
+        tool_name = pending["tool_name"]
+        stored_args = pending.get("arguments", {})
         self.pending_confirmation = None
 
         if not confirmed:
             return AgentResult(
                 success=True,
                 final_response=f"❌ {tool_name} operation cancelled by user. No changes were made.",
-                steps_taken=0
+                steps_taken=0,
+                tool_traces=[]
             )
 
-        return self.run(f"I confirm. Proceed with {tool_name} and execute it now.", on_step=on_step)
+        # Force confirmed=True on the exact stored arguments
+        args = dict(stored_args)
+        args["confirmed"] = True
+
+        tool_output = execute_tool(self.manager, tool_name, args)
+        trace = ToolExecutionTrace(
+            step=1,
+            tool_name=tool_name,
+            arguments=args,
+            result=tool_output,
+            error=tool_output.get("error")
+        )
+        if on_step:
+            on_step(1, tool_name, args, tool_output)
+
+        call_id = f"call_confirmed_{tool_name}"
+        self.conversation_history.append({
+            "role": "assistant",
+            "content": f"Proceeding with confirmed {tool_name}.",
+            "tool_calls": [
+                {
+                    "id": call_id,
+                    "type": "function",
+                    "function": {
+                        "name": tool_name,
+                        "arguments": json.dumps(args)
+                    },
+                    "name": tool_name,
+                    "arguments": args
+                }
+            ]
+        })
+        self.conversation_history.append({
+            "role": "tool",
+            "tool_call_id": call_id,
+            "name": tool_name,
+            "content": json.dumps(tool_output, default=str)
+        })
+
+        if tool_output.get("error"):
+            summary = f"Error executing {tool_name}: {tool_output['error']}"
+            success = False
+        else:
+            summary = tool_output.get("message") or f"Successfully executed {tool_name}."
+            success = not tool_output.get("requires_confirmation", False)
+
+        self.conversation_history.append({
+            "role": "assistant",
+            "content": summary
+        })
+
+        return AgentResult(
+            success=success,
+            final_response=summary,
+            steps_taken=1,
+            tool_traces=[trace]
+        )

@@ -508,8 +508,31 @@ with tab_chat:
             col_c1, col_c2 = st.columns([1, 1])
             with col_c1:
                 if st.button("✅ Confirm & Execute Action", type="primary", use_container_width=True):
-                    with st.spinner("Executing confirmed action..."):
-                        res = st.session_state.agent.confirm_and_resume(confirmed=True)
+                    with st.chat_message("assistant"):
+                        trace_placeholder = st.empty()
+                        live_traces = []
+
+                        def streamlit_on_step(step, tool_name, args, result):
+                            live_traces.append(ToolExecutionTrace(
+                                step=step,
+                                tool_name=tool_name,
+                                arguments=args,
+                                result=result
+                            ))
+                            trace_placeholder.markdown(
+                                f"⚡ *Calling tool `{tool_name}` (Step {step})...*"
+                            )
+
+                        with st.spinner("Executing confirmed action..."):
+                            res = st.session_state.agent.confirm_and_resume(confirmed=True, on_step=streamlit_on_step)
+                        trace_placeholder.empty()
+
+                        if res.tool_traces:
+                            with st.expander(f"🛠️ Tool Execution Traces ({len(res.tool_traces)} action(s))"):
+                                for t in res.tool_traces:
+                                    st.markdown(f"**Step {t.step}: `{t.tool_name}`**")
+                                    st.json({"arguments": t.arguments, "result": t.result})
+
                         st.session_state.pending_confirmation = None
                         st.session_state.messages.append({
                             "role": "assistant",
@@ -523,7 +546,7 @@ with tab_chat:
                     st.session_state.pending_confirmation = None
                     st.session_state.messages.append({
                         "role": "assistant",
-                        "content": "Action cancelled by user. No modifications were made.",
+                        "content": res.final_response,
                         "traces": []
                     })
                     st.rerun()

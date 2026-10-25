@@ -10,6 +10,8 @@ from __future__ import annotations
 import os
 import sys
 import html
+import time
+import uuid
 from pathlib import Path
 from typing import List
 import streamlit as st
@@ -19,7 +21,7 @@ from dotenv import load_dotenv
 # Ensure local imports work
 sys.path.insert(0, str(Path(__file__).parent.resolve()))
 
-from workspace_manager import WorkspaceManager
+from workspace_manager import WorkspaceManager, cleanup_stale_sessions
 from llm import get_llm_provider, GeminiProvider, OpenAIProvider, AnthropicProvider, DEFAULT_GEMINI_MODEL
 from agent import ExcelAgent, ToolExecutionTrace
 
@@ -258,8 +260,13 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # Initialize Session State
+if "session_id" not in st.session_state:
+    st.session_state.session_id = f"session_{int(time.time() * 1000)}_{uuid.uuid4().hex[:8]}"
+if "cleaned_stale_sessions" not in st.session_state:
+    cleanup_stale_sessions(active_session_ids=[st.session_state.session_id])
+    st.session_state.cleaned_stale_sessions = True
 if "manager" not in st.session_state:
-    st.session_state.manager = WorkspaceManager()
+    st.session_state.manager = WorkspaceManager(session_id=st.session_state.session_id)
 if "agent" not in st.session_state:
     st.session_state.agent = None
 if "messages" not in st.session_state:
@@ -330,31 +337,32 @@ with st.sidebar:
     use_sample = st.button("📁 Load Sample Data (sales.xlsx)", use_container_width=True)
 
     if uploaded_file is not None:
-        file_id = f"{uploaded_file.name}_{uploaded_file.size}"
+        safe_name = Path(uploaded_file.name).name
+        file_id = f"{safe_name}_{uploaded_file.size}"
         if st.session_state.get("current_file_id") != file_id:
-            temp_dir = Path("temp_uploads")
-            temp_dir.mkdir(exist_ok=True)
-            temp_path = temp_dir / uploaded_file.name
+            session_upload_dir = Path("temp_uploads") / st.session_state.session_id
+            session_upload_dir.mkdir(parents=True, exist_ok=True)
+            temp_path = session_upload_dir / safe_name
             with open(temp_path, "wb") as f:
                 f.write(uploaded_file.getbuffer())
 
-            st.session_state.manager = WorkspaceManager()
+            st.session_state.manager = WorkspaceManager(session_id=st.session_state.session_id)
             st.session_state.manager.init_from_file(temp_path)
-            st.session_state.current_file_name = uploaded_file.name
+            st.session_state.current_file_name = safe_name
             st.session_state.current_file_id = file_id
             st.session_state.file_loaded = True
             st.session_state.messages = []
             st.session_state.traces = []
             st.session_state.pending_confirmation = None
             st.session_state.agent = None
-            st.toast(f"✅ Loaded: {uploaded_file.name}", icon="📁")
+            st.toast(f"✅ Loaded: {safe_name}", icon="📁")
 
     elif use_sample:
         if st.session_state.get("current_file_id") != "sample_sales":
             sample_path = Path("sample_data/sales.xlsx")
             if not sample_path.exists():
                 import generate_sample_data
-            st.session_state.manager = WorkspaceManager()
+            st.session_state.manager = WorkspaceManager(session_id=st.session_state.session_id)
             st.session_state.manager.init_from_file(sample_path)
             st.session_state.current_file_name = "sales.xlsx"
             st.session_state.current_file_id = "sample_sales"
@@ -476,7 +484,7 @@ with tab_chat:
             sample_path = Path("sample_data/sales.xlsx")
             if not sample_path.exists():
                 import generate_sample_data
-            st.session_state.manager = WorkspaceManager()
+            st.session_state.manager = WorkspaceManager(session_id=st.session_state.session_id)
             st.session_state.manager.init_from_file(sample_path)
             st.session_state.current_file_name = "sales.xlsx"
             st.session_state.current_file_id = "sample_sales"

@@ -386,3 +386,67 @@ class WorkspaceManager:
         """Lists all sheet names in the workbook."""
         wb = self.open_workbook()
         return wb.sheetnames
+
+
+def cleanup_stale_sessions(
+    workspace_root: Optional[str | Path] = None,
+    temp_uploads_root: Optional[str | Path] = None,
+    max_age_hours: Optional[float] = None,
+    active_session_ids: Optional[List[str]] = None
+) -> Dict[str, int]:
+    """Removes session folders and temp upload directories older than max_age_hours (default 24h).
+    Ensures active_session_ids are never touched. Configurable via EXCEL_SESSION_MAX_AGE_HOURS env var.
+    """
+    if max_age_hours is None:
+        try:
+            max_age_hours = float(os.getenv("EXCEL_SESSION_MAX_AGE_HOURS", "24"))
+        except (ValueError, TypeError):
+            max_age_hours = 24.0
+
+    if workspace_root is None:
+        workspace_root = os.getenv("EXCEL_WORKSPACE_DIR", "workspace")
+    if temp_uploads_root is None:
+        temp_uploads_root = os.getenv("EXCEL_TEMP_UPLOADS_DIR", "temp_uploads")
+
+    max_age_seconds = max_age_hours * 3600
+    now = time.time()
+    active_set = set(active_session_ids or [])
+
+    removed_workspaces = 0
+    removed_uploads = 0
+
+    ws_path = Path(workspace_root)
+    if ws_path.exists() and ws_path.is_dir():
+        for session_dir in ws_path.iterdir():
+            if not session_dir.is_dir():
+                continue
+            if session_dir.name in active_set:
+                continue
+            try:
+                mtime = session_dir.stat().st_mtime
+                if (now - mtime) > max_age_seconds:
+                    shutil.rmtree(session_dir, ignore_errors=True)
+                    removed_workspaces += 1
+            except Exception:
+                pass
+
+    up_path = Path(temp_uploads_root)
+    if up_path.exists() and up_path.is_dir():
+        for item in up_path.iterdir():
+            if item.name in active_set:
+                continue
+            try:
+                mtime = item.stat().st_mtime
+                if (now - mtime) > max_age_seconds:
+                    if item.is_dir():
+                        shutil.rmtree(item, ignore_errors=True)
+                    else:
+                        item.unlink(missing_ok=True)
+                    removed_uploads += 1
+            except Exception:
+                pass
+
+    return {
+        "removed_workspaces": removed_workspaces,
+        "removed_uploads": removed_uploads
+    }

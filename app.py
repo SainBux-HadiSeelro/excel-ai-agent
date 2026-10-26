@@ -23,9 +23,36 @@ sys.path.insert(0, str(Path(__file__).parent.resolve()))
 
 from workspace_manager import WorkspaceManager, cleanup_stale_sessions, load_sheet_dataframe, safe_upload_name
 from llm import get_llm_provider, GeminiProvider, OpenAIProvider, AnthropicProvider, DEFAULT_GEMINI_MODEL, is_model_error
-from agent import ExcelAgent, ToolExecutionTrace
+from agent import ExcelAgent, ToolExecutionTrace, SYSTEM_PROMPT
 
 load_dotenv()
+
+
+def load_sample_workbook() -> None:
+    """Loads the sample_data/sales.xlsx dataset into the active session workspace."""
+    sample_path = Path("sample_data/sales.xlsx")
+    if not sample_path.exists():
+        import generate_sample_data
+    st.session_state.manager = WorkspaceManager(session_id=st.session_state.session_id)
+    st.session_state.manager.init_from_file(sample_path)
+    st.session_state.current_file_name = "sales.xlsx"
+    st.session_state.current_file_id = "sample_sales"
+    st.session_state.file_loaded = True
+    st.session_state.pending_confirmation = None
+    if st.session_state.agent:
+        st.session_state.agent.manager = st.session_state.manager
+
+
+def init_new_blank_workbook() -> None:
+    """Initializes a new empty workbook in the active session workspace."""
+    st.session_state.manager = WorkspaceManager(session_id=st.session_state.session_id)
+    st.session_state.manager.init_blank("workbook.xlsx")
+    st.session_state.current_file_name = "workbook.xlsx"
+    st.session_state.current_file_id = f"blank_{int(time.time() * 1000)}"
+    st.session_state.file_loaded = True
+    st.session_state.pending_confirmation = None
+    if st.session_state.agent:
+        st.session_state.agent.manager = st.session_state.manager
 
 
 def render_file_status_bar_html(filename: str, active_sheets: List[str]) -> str:
@@ -328,13 +355,17 @@ with st.sidebar:
         st.info("💡 **No API key?** Switch Provider to **'Offline Demo (Mock)'** above to test instantly without an API key.")
 
     st.markdown("---")
-    st.markdown("#### 2. 📂 Upload Workbook")
+    st.markdown("#### 2. 📂 Workbook Actions")
     uploaded_file = st.file_uploader(
         "Upload Excel (.xlsx) or CSV",
         type=["xlsx", "csv"]
     )
 
-    use_sample = st.button("📁 Load Sample Data (sales.xlsx)", use_container_width=True)
+    col_sb1, col_sb2 = st.columns(2)
+    with col_sb1:
+        use_sample = st.button("📁 Load Sample", use_container_width=True)
+    with col_sb2:
+        create_blank = st.button("📄 Blank Sheet", use_container_width=True)
 
     if uploaded_file is not None:
         safe_name = safe_upload_name(uploaded_file.name)
@@ -351,27 +382,37 @@ with st.sidebar:
             st.session_state.current_file_name = safe_name
             st.session_state.current_file_id = file_id
             st.session_state.file_loaded = True
-            st.session_state.messages = []
+            st.session_state.messages.append({
+                "role": "assistant",
+                "content": f"📂 Uploaded workbook `{safe_name}` load kar liya gaya hai! Ab aap is par koi bhi task de sakte hain.",
+                "traces": []
+            })
             st.session_state.traces = []
             st.session_state.pending_confirmation = None
-            st.session_state.agent = None
+            if st.session_state.agent:
+                st.session_state.agent.manager = st.session_state.manager
             st.toast(f"✅ Loaded: {safe_name}", icon="📁")
+            st.rerun()
 
     elif use_sample:
-        if st.session_state.get("current_file_id") != "sample_sales":
-            sample_path = Path("sample_data/sales.xlsx")
-            if not sample_path.exists():
-                import generate_sample_data
-            st.session_state.manager = WorkspaceManager(session_id=st.session_state.session_id)
-            st.session_state.manager.init_from_file(sample_path)
-            st.session_state.current_file_name = "sales.xlsx"
-            st.session_state.current_file_id = "sample_sales"
-            st.session_state.file_loaded = True
-            st.session_state.messages = []
-            st.session_state.traces = []
-            st.session_state.pending_confirmation = None
-            st.session_state.agent = None
-            st.toast("✅ Loaded sample_data/sales.xlsx", icon="📁")
+        load_sample_workbook()
+        st.session_state.messages.append({
+            "role": "assistant",
+            "content": "📁 Sample workbook `sales.xlsx` load kar liya gaya hai! Ab aap koi bhi task de sakte hain.",
+            "traces": []
+        })
+        st.toast("✅ Loaded sample_data/sales.xlsx", icon="📁")
+        st.rerun()
+
+    elif create_blank:
+        init_new_blank_workbook()
+        st.session_state.messages.append({
+            "role": "assistant",
+            "content": "📄 Nayi blank workbook `workbook.xlsx` create kardi gayi hai! Ab aap columns aur data add karne ka task de sakte hain.",
+            "traces": []
+        })
+        st.toast("✅ Created workbook.xlsx", icon="📄")
+        st.rerun()
 
     # Load agent instance
     current_config = f"{provider_choice}_{model_choice}_{api_key_input}"
@@ -407,6 +448,11 @@ with st.sidebar:
             undo_res = st.session_state.manager.undo()
             if undo_res["success"]:
                 st.toast(undo_res["message"], icon="↩️")
+                st.session_state.messages.append({
+                    "role": "assistant",
+                    "content": f"↩️ **Undo:** {undo_res['message']}",
+                    "traces": []
+                })
                 st.rerun()
             else:
                 st.warning(undo_res["message"])
@@ -423,16 +469,29 @@ with st.sidebar:
                     use_container_width=True
                 )
 
+    st.markdown("---")
+    if st.button("🗑️ Clear Chat History", use_container_width=True):
+        st.session_state.messages = []
+        st.session_state.traces = []
+        st.session_state.pending_confirmation = None
+        if st.session_state.agent:
+            st.session_state.agent.conversation_history = [
+                {"role": "system", "content": SYSTEM_PROMPT}
+            ]
+        st.toast("Chat history cleared!", icon="🗑️")
+        st.rerun()
+
 # Top Hero Banner
 st.markdown("""
 <div class="hero-banner">
     <div class="hero-title">
-        <span>📊 Excel AI Agent</span>
+        <span>📊 Excel AI Chatbot</span>
     </div>
     <div class="hero-subtitle">
-        Autonomous spreadsheet assistant that understands English & Roman Urdu — formulas, cleanup, charts & analysis.
+        Autonomous spreadsheet chatbot assistant that understands English & Roman Urdu — formulas, cleanup, charts & analysis.
     </div>
     <div>
+        <span class="badge-pill">💬 Continuous Chatbot</span>
         <span class="badge-pill">🗣️ English & Roman Urdu</span>
         <span class="badge-pill">🛡️ 100% Non-Destructive Sandbox</span>
         <span class="badge-pill">⚡ Live Excel Formulas</span>
@@ -442,71 +501,64 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # Main Content Layout: Two Tabs
-tab_chat, tab_preview = st.tabs(["💬 AI Assistant", "📑 Sheet Preview"])
+tab_chat, tab_preview = st.tabs(["💬 AI Chatbot", "📑 Live Sheet Preview"])
 
 # TAB 1: Chat and Tool Traces
 with tab_chat:
-    if not st.session_state.file_loaded:
-        # Welcome Empty State
-        st.markdown("""
-        <div class="welcome-container">
-            <h3 style="margin-top:0; color:#1E293B;">👋 Welcome to Excel AI Agent!</h3>
-            <p style="color:#64748B; font-size:0.95rem;">
-                Get started in seconds. Upload your own <b>.xlsx</b> or <b>.csv</b> spreadsheet, or click the button below to load the ready-made demo dataset.
-            </p>
-        </div>
-        """, unsafe_allow_html=True)
-
-        col_w1, col_w2, col_w3 = st.columns(3)
-        with col_w1:
-            st.markdown("""
-            <div class="feature-card">
-                <div class="feature-icon">🧠</div>
-                <div class="feature-title">Multilingual AI</div>
-                <div class="feature-desc">Prompt in plain English or Roman Urdu like <i>"total sales nikalo"</i> or <i>"duplicates hata do"</i>.</div>
-            </div>
-            """, unsafe_allow_html=True)
-        with col_w2:
-            st.markdown("""
-            <div class="feature-card">
-                <div class="feature-icon">🛡️</div>
-                <div class="feature-title">Safe & Non-Destructive</div>
-                <div class="feature-desc">Works strictly in an isolated workspace. Full undo history and confirmation guards for deletions.</div>
-            </div>
-            """, unsafe_allow_html=True)
-        with col_w3:
-            st.markdown("""
-            <div class="feature-card">
-                <div class="feature-icon">📈</div>
-                <div class="feature-title">Dynamic Formulas & Charts</div>
-                <div class="feature-desc">Writes live `=SUM()` formulas over hardcoded numbers, and creates native Excel charts.</div>
-            </div>
-            """, unsafe_allow_html=True)
-
-        st.markdown("<br/>", unsafe_allow_html=True)
-        if st.button("📁 Load Sample Dataset (sales.xlsx) to Start Testing", type="primary", use_container_width=True):
-            sample_path = Path("sample_data/sales.xlsx")
-            if not sample_path.exists():
-                import generate_sample_data
-            st.session_state.manager = WorkspaceManager(session_id=st.session_state.session_id)
-            st.session_state.manager.init_from_file(sample_path)
-            st.session_state.current_file_name = "sales.xlsx"
-            st.session_state.current_file_id = "sample_sales"
-            st.session_state.file_loaded = True
-            st.rerun()
-
-    else:
-        # File status bar
-        active_sheets = st.session_state.manager.get_sheet_names()
+    # 1. Active File Status Bar
+    if st.session_state.file_loaded:
+        try:
+            active_sheets = st.session_state.manager.get_sheet_names()
+        except Exception:
+            active_sheets = []
         st.markdown(
             render_file_status_bar_html(st.session_state.current_file_name, active_sheets),
             unsafe_allow_html=True
         )
+    else:
+        st.markdown(
+            '<div class="file-status-bar" style="background:#F8FAFC; border:1px solid #CBD5E1; color:#334155;">'
+            '<span>💡</span>'
+            '<span>No active workbook loaded • Type any task below, or click a Quick Prompt to start!</span>'
+            '</div>',
+            unsafe_allow_html=True
+        )
 
-        # Quick Action Suggestion Chips (2x2 grid for mobile & desktop touch friendliness)
-        st.markdown("<p style='font-size:0.85rem; font-weight:600; color:#64748B; margin-bottom:6px;'>⚡ QUICK PROMPTS (Click to run):</p>", unsafe_allow_html=True)
-        qrow1_c1, qrow1_c2 = st.columns(2)
-        quick_selected = None
+    # 2. Quick Action Suggestion Chips
+    st.markdown("<p style='font-size:0.85rem; font-weight:600; color:#64748B; margin-bottom:6px;'>⚡ QUICK PROMPTS (Click to run):</p>", unsafe_allow_html=True)
+    qrow1_c1, qrow1_c2 = st.columns(2)
+    quick_selected = None
+
+    if not st.session_state.file_loaded:
+        with qrow1_c1:
+            if st.button("📁 Load Sample Data (sales.xlsx)", use_container_width=True):
+                load_sample_workbook()
+                st.session_state.messages.append({
+                    "role": "assistant",
+                    "content": "📁 Sample workbook `sales.xlsx` load kar liya gaya hai! Ab aap koi bhi task de sakte hain.",
+                    "traces": []
+                })
+                st.rerun()
+        with qrow1_c2:
+            if st.button("📄 Nayi Blank Sheet Banao", use_container_width=True):
+                init_new_blank_workbook()
+                st.session_state.messages.append({
+                    "role": "assistant",
+                    "content": "📄 Nayi blank workbook `workbook.xlsx` create kardi gayi hai! Ab aap columns aur data add karne ka task de sakte hain.",
+                    "traces": []
+                })
+                st.rerun()
+
+        qrow2_c1, qrow2_c2 = st.columns(2)
+        with qrow2_c1:
+            if st.button("📊 Sample Total sales nikalo", use_container_width=True):
+                load_sample_workbook()
+                quick_selected = "total sales nikalo"
+        with qrow2_c2:
+            if st.button("📈 Sample Region chart banao", use_container_width=True):
+                load_sample_workbook()
+                quick_selected = "Targets sheet mein region ke hisaab se column chart banao"
+    else:
         with qrow1_c1:
             if st.button("📊 Total sales nikalo", use_container_width=True):
                 quick_selected = "total sales nikalo"
@@ -522,84 +574,41 @@ with tab_chat:
             if st.button("✨ Clean Sales Rep text", use_container_width=True):
                 quick_selected = "Sales Rep column D ke extra spaces hatao aur title case kardo"
 
-        # Display Chat History
-        for msg in st.session_state.messages:
-            with st.chat_message(msg["role"]):
-                st.markdown(msg["content"])
-                if "traces" in msg and msg["traces"]:
-                    with st.expander(f"🛠️ Tool Execution Traces ({len(msg['traces'])} action(s))"):
-                        for t in msg["traces"]:
-                            st.markdown(f"**Step {t.step}: `{t.tool_name}`**")
-                            st.json({"arguments": t.arguments, "result": t.result})
-
-        # Destructive Confirmation Card (if any pending)
-        if st.session_state.pending_confirmation:
-            conf = st.session_state.pending_confirmation
-            warning_text = conf.get('details', {}).get('warning', 'Do you confirm this action?')
+    # 3. Initial Chatbot Welcome Greeting if no messages
+    if not st.session_state.messages:
+        with st.chat_message("assistant"):
             st.markdown(
-                render_destructive_confirmation_html(warning_text),
-                unsafe_allow_html=True
+                "👋 **Assalam-o-Alaikum! Welcome to Excel AI Chatbot.**\n\n"
+                "Main aapka autonomous spreadsheet AI assistant hoon. Aap mujhe English ya Roman Urdu mein Excel ka koi bhi task de sakte hain:\n\n"
+                "- 📊 **Calculations & Formulas** (e.g. *'total sales nikalo'*, *'average revenue calculate karo'*)\n"
+                "- 🧹 **Data Cleaning** (e.g. *'duplicates hata do'*, *'extra spaces clean karo'*)\n"
+                "- 📈 **Charts & Visualizations** (e.g. *'region ke hisaab se chart banao'*)\n"
+                "- ➕ **Sheets & Tables** (e.g. *'nayi Targets sheet banao'*)\n\n"
+                "👉 Shuru karne ke liye upar **Quick Prompts** par click karein, sidebar se file upload karein, ya neeche apna task type karein!"
             )
 
-            col_c1, col_c2 = st.columns([1, 1])
-            with col_c1:
-                if st.button("✅ Confirm & Execute Action", type="primary", use_container_width=True):
-                    with st.chat_message("assistant"):
-                        trace_placeholder = st.empty()
-                        live_traces = []
+    # 4. Display Chat History
+    for msg in st.session_state.messages:
+        with st.chat_message(msg["role"]):
+            st.markdown(msg["content"])
+            if "traces" in msg and msg["traces"]:
+                with st.expander(f"🛠️ Tool Execution Traces ({len(msg['traces'])} action(s))"):
+                    for t in msg["traces"]:
+                        st.markdown(f"**Step {t.step}: `{t.tool_name}`**")
+                        st.json({"arguments": t.arguments, "result": t.result})
 
-                        def streamlit_on_step(step, tool_name, args, result):
-                            live_traces.append(ToolExecutionTrace(
-                                step=step,
-                                tool_name=tool_name,
-                                arguments=args,
-                                result=result
-                            ))
-                            trace_placeholder.markdown(
-                                f"⚡ *Calling tool `{tool_name}` (Step {step})...*"
-                            )
+    # 5. Destructive Confirmation Card (if any pending)
+    if st.session_state.pending_confirmation:
+        conf = st.session_state.pending_confirmation
+        warning_text = conf.get('details', {}).get('warning', 'Do you confirm this action?')
+        st.markdown(
+            render_destructive_confirmation_html(warning_text),
+            unsafe_allow_html=True
+        )
 
-                        with st.spinner("Executing confirmed action..."):
-                            res = st.session_state.agent.confirm_and_resume(confirmed=True, on_step=streamlit_on_step)
-                        trace_placeholder.empty()
-
-                        if res.tool_traces:
-                            with st.expander(f"🛠️ Tool Execution Traces ({len(res.tool_traces)} action(s))"):
-                                for t in res.tool_traces:
-                                    st.markdown(f"**Step {t.step}: `{t.tool_name}`**")
-                                    st.json({"arguments": t.arguments, "result": t.result})
-
-                        st.session_state.pending_confirmation = None
-                        st.session_state.messages.append({
-                            "role": "assistant",
-                            "content": res.final_response,
-                            "traces": res.tool_traces
-                        })
-                        st.rerun()
-            with col_c2:
-                if st.button("❌ Cancel Action", use_container_width=True):
-                    res = st.session_state.agent.confirm_and_resume(confirmed=False)
-                    st.session_state.pending_confirmation = None
-                    st.session_state.messages.append({
-                        "role": "assistant",
-                        "content": res.final_response,
-                        "traces": []
-                    })
-                    st.rerun()
-
-        # Chat Input (or quick prompt trigger)
-        chat_input_val = st.chat_input("Ask Excel AI (e.g. 'total sales nikalo', 'duplicates hata do', 'region ka chart banao')...")
-        prompt_to_run = quick_selected or chat_input_val
-
-        if prompt_to_run:
-            if not st.session_state.agent:
-                st.error("⚠️ Please supply a valid API key in the sidebar, or select **Offline Demo (Mock)** in Provider to test without an API key.")
-            else:
-                # Add user prompt to chat
-                st.session_state.messages.append({"role": "user", "content": prompt_to_run})
-                with st.chat_message("user"):
-                    st.markdown(prompt_to_run)
-
+        col_c1, col_c2 = st.columns([1, 1])
+        with col_c1:
+            if st.button("✅ Confirm & Execute Action", type="primary", use_container_width=True):
                 with st.chat_message("assistant"):
                     trace_placeholder = st.empty()
                     live_traces = []
@@ -615,39 +624,113 @@ with tab_chat:
                             f"⚡ *Calling tool `{tool_name}` (Step {step})...*"
                         )
 
-                    with st.spinner("Analyzing spreadsheet and executing..."):
-                        agent_res = st.session_state.agent.run(prompt_to_run, on_step=streamlit_on_step)
-
+                    with st.spinner("Executing confirmed action..."):
+                        res = st.session_state.agent.confirm_and_resume(confirmed=True, on_step=streamlit_on_step)
                     trace_placeholder.empty()
 
-                    # Render final response
-                    if not agent_res.success and agent_res.error:
-                        err_full = (agent_res.final_response or "") + " " + str(agent_res.error)
-                        if is_model_error(err_full):
-                            st.error(f"❌ {agent_res.final_response}\n\n💡 **Tip:** Model not found or retired. Please update the **Model Name** field in the sidebar.")
-                        else:
-                            st.error(f"❌ {agent_res.final_response}")
-                    else:
-                        st.markdown(agent_res.final_response)
-
-                    if agent_res.tool_traces:
-                        with st.expander(f"🛠️ Tool Execution Traces ({len(agent_res.tool_traces)} action(s))"):
-                            for t in agent_res.tool_traces:
+                    if res.tool_traces:
+                        with st.expander(f"🛠️ Tool Execution Traces ({len(res.tool_traces)} action(s))"):
+                            for t in res.tool_traces:
                                 st.markdown(f"**Step {t.step}: `{t.tool_name}`**")
                                 st.json({"arguments": t.arguments, "result": t.result})
 
-                    # Handle confirmation state
-                    if agent_res.pending_confirmation:
-                        st.session_state.pending_confirmation = agent_res.pending_confirmation
-
-                    # Save to history
+                    st.session_state.pending_confirmation = None
                     st.session_state.messages.append({
                         "role": "assistant",
-                        "content": agent_res.final_response,
-                        "traces": agent_res.tool_traces
+                        "content": res.final_response,
+                        "traces": res.tool_traces
                     })
-
                     st.rerun()
+        with col_c2:
+            if st.button("❌ Cancel Action", use_container_width=True):
+                res = st.session_state.agent.confirm_and_resume(confirmed=False)
+                st.session_state.pending_confirmation = None
+                st.session_state.messages.append({
+                    "role": "assistant",
+                    "content": res.final_response,
+                    "traces": []
+                })
+                st.rerun()
+
+    # 6. Chat Input (Always available at the bottom of the chat)
+    chat_input_val = st.chat_input("Ask Excel AI Chatbot (e.g. 'total sales nikalo', 'duplicates hata do', 'region ka chart banao')...")
+    prompt_to_run = quick_selected or chat_input_val
+
+    if prompt_to_run:
+        # Auto-initialize workbook if none loaded yet
+        if not st.session_state.file_loaded:
+            prompt_lower = prompt_to_run.lower()
+            if any(k in prompt_lower for k in ["sample", "demo", "sales"]):
+                load_sample_workbook()
+            else:
+                init_new_blank_workbook()
+
+        # Ensure agent instance is ready
+        if st.session_state.agent is None:
+            if "Offline" in provider_choice or not api_key_input:
+                from llm import MockProvider
+                llm = MockProvider()
+            elif provider_choice == "Gemini":
+                llm = GeminiProvider(api_key=api_key_input, model=model_choice)
+            elif provider_choice == "OpenAI":
+                llm = OpenAIProvider(api_key=api_key_input, model=model_choice)
+            else:
+                llm = AnthropicProvider(api_key=api_key_input, model=model_choice)
+            st.session_state.agent = ExcelAgent(manager=st.session_state.manager, provider=llm)
+
+        # Add user prompt to chat
+        st.session_state.messages.append({"role": "user", "content": prompt_to_run})
+        with st.chat_message("user"):
+            st.markdown(prompt_to_run)
+
+        with st.chat_message("assistant"):
+            trace_placeholder = st.empty()
+            live_traces = []
+
+            def streamlit_on_step(step, tool_name, args, result):
+                live_traces.append(ToolExecutionTrace(
+                    step=step,
+                    tool_name=tool_name,
+                    arguments=args,
+                    result=result
+                ))
+                trace_placeholder.markdown(
+                    f"⚡ *Calling tool `{tool_name}` (Step {step})...*"
+                )
+
+            with st.spinner("Analyzing spreadsheet and executing..."):
+                agent_res = st.session_state.agent.run(prompt_to_run, on_step=streamlit_on_step)
+
+            trace_placeholder.empty()
+
+            # Render final response
+            if not agent_res.success and agent_res.error:
+                err_full = (agent_res.final_response or "") + " " + str(agent_res.error)
+                if is_model_error(err_full):
+                    st.error(f"❌ {agent_res.final_response}\n\n💡 **Tip:** Model not found or retired. Please update the **Model Name** field in the sidebar.")
+                else:
+                    st.error(f"❌ {agent_res.final_response}")
+            else:
+                st.markdown(agent_res.final_response)
+
+            if agent_res.tool_traces:
+                with st.expander(f"🛠️ Tool Execution Traces ({len(agent_res.tool_traces)} action(s))"):
+                    for t in agent_res.tool_traces:
+                        st.markdown(f"**Step {t.step}: `{t.tool_name}`**")
+                        st.json({"arguments": t.arguments, "result": t.result})
+
+            # Handle confirmation state
+            if agent_res.pending_confirmation:
+                st.session_state.pending_confirmation = agent_res.pending_confirmation
+
+            # Save to history
+            st.session_state.messages.append({
+                "role": "assistant",
+                "content": agent_res.final_response,
+                "traces": agent_res.tool_traces
+            })
+
+            st.rerun()
 
 
 @st.cache_data(max_entries=50, ttl=3600)
@@ -659,7 +742,26 @@ def load_preview_cached(file_path_str: str, mtime_ns: int, size: int, sheet_name
 # TAB 2: Sheet Preview
 with tab_preview:
     if not st.session_state.file_loaded:
-        st.info("👈 Please load a workbook to preview sheets and data.")
+        st.info("👈 Abhi koi workbook loaded nahi hai. Nayi sheet banane ke liye chat mein task dein ya neeche button se sample data load karein.")
+        col_prev1, col_prev2 = st.columns(2)
+        with col_prev1:
+            if st.button("📁 Load Sample Data (sales.xlsx)", key="preview_load_sample", use_container_width=True):
+                load_sample_workbook()
+                st.session_state.messages.append({
+                    "role": "assistant",
+                    "content": "📁 Sample workbook `sales.xlsx` load kar liya gaya hai! Ab aap koi bhi task de sakte hain.",
+                    "traces": []
+                })
+                st.rerun()
+        with col_prev2:
+            if st.button("📄 Create Blank Workbook", key="preview_create_blank", use_container_width=True):
+                init_new_blank_workbook()
+                st.session_state.messages.append({
+                    "role": "assistant",
+                    "content": "📄 Nayi blank workbook `workbook.xlsx` create kardi gayi hai!",
+                    "traces": []
+                })
+                st.rerun()
     else:
         sheet_names = st.session_state.manager.get_sheet_names()
         col_s1, col_s2 = st.columns([2, 1])

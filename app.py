@@ -287,27 +287,132 @@ st.markdown("""
     /* Floating Corner Chatbot Widget ("kone m laga rhe") */
     .st-key-corner_chatbot {
         position: fixed !important;
-        bottom: 20px !important;
-        right: 20px !important;
+        bottom: 24px !important;
+        right: 24px !important;
         width: 440px !important;
         max-width: calc(100vw - 32px) !important;
-        height: 610px !important;
-        max-height: calc(100vh - 40px) !important;
+        height: 640px !important;
+        max-height: calc(100vh - 44px) !important;
         background: #FFFFFF !important;
-        border-radius: 16px !important;
-        box-shadow: 0 20px 50px rgba(15, 23, 42, 0.25), 0 4px 15px rgba(15, 23, 42, 0.1) !important;
-        border: 1.5px solid #CBD5E1 !important;
+        border-radius: 20px !important;
+        box-shadow: 0 25px 60px -12px rgba(15, 23, 42, 0.3), 0 0 0 1px rgba(226, 232, 240, 0.9) !important;
         z-index: 999999 !important;
         display: flex !important;
         flex-direction: column !important;
-        padding: 12px 14px !important;
+        padding: 0 !important;
         overflow: hidden !important;
+        animation: cornerChatFadeIn 0.25s cubic-bezier(0.16, 1, 0.3, 1) !important;
+    }
+
+    @keyframes cornerChatFadeIn {
+        from {
+            opacity: 0;
+            transform: translateY(18px) scale(0.97);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0) scale(1);
+        }
     }
 
     .st-key-corner_chatbot [data-testid="stVerticalBlock"] {
-        gap: 0.35rem !important;
+        gap: 0.3rem !important;
     }
 
+    /* Corner Chatbot Header */
+    .corner-header-container {
+        background: linear-gradient(135deg, #0F172A 0%, #1E293B 100%);
+        padding: 12px 16px;
+        color: #FFFFFF;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+    }
+
+    .chat-avatar-badge {
+        width: 36px;
+        height: 36px;
+        border-radius: 10px;
+        background: linear-gradient(135deg, #2563EB 0%, #7C3AED 100%);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.15rem;
+        box-shadow: 0 4px 14px rgba(37, 99, 235, 0.4);
+    }
+
+    .pulsing-green-dot {
+        width: 8px;
+        height: 8px;
+        background-color: #22C55E;
+        border-radius: 50%;
+        display: inline-block;
+        box-shadow: 0 0 8px #22C55E;
+        animation: pulseDot 2s infinite;
+    }
+
+    @keyframes pulseDot {
+        0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(34, 197, 94, 0.7); }
+        70% { transform: scale(1.1); box-shadow: 0 0 0 6px rgba(34, 197, 94, 0); }
+        100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(34, 197, 94, 0); }
+    }
+
+    /* Welcome Card Inside Corner Chat */
+    .corner-welcome-card {
+        background: linear-gradient(135deg, #F8FAFC 0%, #EFF6FF 100%);
+        border: 1px solid #DBEAFE;
+        border-radius: 14px;
+        padding: 12px 14px;
+        margin-bottom: 8px;
+    }
+
+    .corner-welcome-pill-list {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+        margin-top: 6px;
+    }
+
+    .corner-task-badge {
+        display: inline-block;
+        font-size: 0.72rem;
+        font-weight: 600;
+        color: #1E40AF;
+        background: #DBEAFE;
+        padding: 3px 8px;
+        border-radius: 12px;
+        border: 1px solid #BFDBFE;
+    }
+
+    /* Chat Messages styling */
+    div[data-testid="stChatMessage"] {
+        border-radius: 12px !important;
+        padding: 8px 12px !important;
+        margin-bottom: 6px !important;
+        border: 1px solid #F1F5F9 !important;
+    }
+
+    /* Quick Action Pills in Corner Chat */
+    .st-key-corner_chatbot .stButton > button {
+        border-radius: 18px !important;
+        min-height: 30px !important;
+        height: 30px !important;
+        font-size: 0.76rem !important;
+        font-weight: 500 !important;
+        padding: 2px 8px !important;
+        background: #F8FAFC !important;
+        color: #334155 !important;
+        border: 1px solid #E2E8F0 !important;
+        transition: all 0.15s ease !important;
+    }
+
+    .st-key-corner_chatbot .stButton > button:hover {
+        background: #E2E8F0 !important;
+        color: #0F172A !important;
+        border-color: #CBD5E1 !important;
+        transform: translateY(-1px) !important;
+    }
+
+    /* Floating Corner Trigger Pill (When Minimized) */
     .st-key-corner_chat_trigger {
         position: fixed !important;
         bottom: 24px !important;
@@ -316,29 +421,32 @@ st.markdown("""
     }
 
     .st-key-corner_chat_trigger button {
-        border-radius: 30px !important;
+        border-radius: 32px !important;
         padding: 12px 24px !important;
-        background: linear-gradient(135deg, #0F2027 0%, #203A43 50%, #2C5364 100%) !important;
-        color: white !important;
+        background: linear-gradient(135deg, #0F172A 0%, #1E293B 40%, #2563EB 100%) !important;
+        color: #FFFFFF !important;
         font-weight: 600 !important;
         font-size: 0.95rem !important;
-        box-shadow: 0 8px 24px rgba(15, 32, 39, 0.35) !important;
-        border: 1.5px solid rgba(255, 255, 255, 0.3) !important;
-        transition: transform 0.2s, box-shadow 0.2s !important;
+        letter-spacing: 0.2px !important;
+        box-shadow: 0 12px 32px -4px rgba(37, 99, 235, 0.45), 0 4px 12px rgba(15, 23, 42, 0.2) !important;
+        border: 1.5px solid rgba(255, 255, 255, 0.35) !important;
+        transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1) !important;
     }
 
     .st-key-corner_chat_trigger button:hover {
-        transform: translateY(-2px) !important;
-        box-shadow: 0 12px 28px rgba(15, 32, 39, 0.45) !important;
+        transform: translateY(-3px) scale(1.03) !important;
+        box-shadow: 0 16px 40px -4px rgba(37, 99, 235, 0.6), 0 6px 16px rgba(15, 23, 42, 0.3) !important;
+        border-color: rgba(255, 255, 255, 0.6) !important;
     }
 
     @media (max-width: 768px) {
         .st-key-corner_chatbot {
-            bottom: 8px !important;
-            right: 8px !important;
-            left: 8px !important;
+            bottom: 6px !important;
+            right: 6px !important;
+            left: 6px !important;
             width: auto !important;
-            height: 75vh !important;
+            height: 80vh !important;
+            border-radius: 16px !important;
         }
     }
 </style>
@@ -735,30 +843,54 @@ if chat_view_mode == "Corner Floating Chatbot (Recommended)":
     corner_quick_selected = None
     if st.session_state.chat_open:
         with st.container(key="corner_chatbot"):
+            active_name = html.escape(str(st.session_state.current_file_name or "Ready"))
             col_ch1, col_ch2 = st.columns([5, 1])
             with col_ch1:
                 st.markdown(
-                    "<div style='display:flex; align-items:center; gap:8px;'>"
-                    "<b>💬 Excel AI Chatbot</b>"
-                    "<span style='font-size:0.75rem; color:#16A34A; background:#DCFCE7; padding:2px 8px; border-radius:10px; font-weight:600;'>● Online</span>"
-                    "</div>",
+                    f"""
+                    <div style="display:flex; align-items:center; gap:10px; padding:10px 12px 6px 12px;">
+                        <div class="chat-avatar-badge">🤖</div>
+                        <div>
+                            <div style="font-weight:700; font-size:0.95rem; color:#0F172A; line-height:1.2;">
+                                Excel AI Copilot
+                            </div>
+                            <div style="font-size:0.75rem; color:#64748B; display:flex; align-items:center; gap:6px; margin-top:2px;">
+                                <span class="pulsing-green-dot"></span>
+                                <span>Active • <b>{active_name}</b></span>
+                            </div>
+                        </div>
+                    </div>
+                    """,
                     unsafe_allow_html=True
                 )
             with col_ch2:
+                st.markdown("<div style='padding-top:10px;'>", unsafe_allow_html=True)
                 if st.button("➖", key="minimize_corner_chat", help="Minimize corner chatbot"):
                     st.session_state.chat_open = False
                     st.rerun()
+                st.markdown("</div>", unsafe_allow_html=True)
 
             # Scrollable chat message area
-            with st.container(height=360):
+            with st.container(height=370):
                 if not st.session_state.messages:
                     st.markdown(
-                        "👋 **Assalam-o-Alaikum!** Main aapka Excel AI Chatbot hoon.\n\n"
-                        "Aap jo bhi task yahan kone se denge, main spreadsheet par execute karta rahoonga:\n\n"
-                        "- 📊 *'total sales nikalo'*\n"
-                        "- 🧹 *'Order_ID ke hisaab se duplicates hata do'*\n"
-                        "- 📈 *'region ke hisaab se chart banao'*\n"
-                        "- 📄 *'nayi Targets sheet banao'*"
+                        """
+                        <div class="corner-welcome-card">
+                            <div style="font-size:1rem; font-weight:700; color:#1E293B; margin-bottom:4px;">
+                                👋 Assalam-o-Alaikum!
+                            </div>
+                            <p style="font-size:0.84rem; color:#475569; margin:0 0 8px 0; line-height:1.4;">
+                                Main aapka <b>Excel AI Copilot</b> hoon. Jo task aap denge, main spreadsheet par live execute karta rahoonga!
+                            </p>
+                            <div class="corner-welcome-pill-list">
+                                <span class="corner-task-badge">⚡ Live Formulas</span>
+                                <span class="corner-task-badge">🧹 Data Cleaning</span>
+                                <span class="corner-task-badge">📈 Native Charts</span>
+                                <span class="corner-task-badge">🗣️ English & Roman Urdu</span>
+                            </div>
+                        </div>
+                        """,
+                        unsafe_allow_html=True
                     )
 
                 for msg in st.session_state.messages:
@@ -798,8 +930,9 @@ if chat_view_mode == "Corner Floating Chatbot (Recommended)":
                             })
                             st.rerun()
 
-            # Compact Quick Action Tasks
-            qp1, qp2, qp3 = st.columns(3)
+            # Compact Quick Action Tasks (4 pills)
+            st.markdown("<p style='font-size:0.74rem; font-weight:600; color:#64748B; margin:4px 0 2px 8px;'>⚡ QUICK PROMPTS:</p>", unsafe_allow_html=True)
+            qp1, qp2, qp3, qp4 = st.columns(4)
             with qp1:
                 if st.button("📊 Total", key="qp_corner_total", use_container_width=True):
                     corner_quick_selected = "total sales nikalo"
@@ -809,6 +942,9 @@ if chat_view_mode == "Corner Floating Chatbot (Recommended)":
             with qp3:
                 if st.button("📈 Chart", key="qp_corner_chart", use_container_width=True):
                     corner_quick_selected = "Targets sheet mein region ke hisaab se column chart banao"
+            with qp4:
+                if st.button("✨ Clean", key="qp_corner_clean", use_container_width=True):
+                    corner_quick_selected = "Sales Rep column D ke extra spaces hatao aur title case kardo"
 
             # Corner Chat Input
             corner_inp = st.chat_input("Task likhein (e.g. 'total sales nikalo')...", key="corner_chat_input")
@@ -819,7 +955,7 @@ if chat_view_mode == "Corner Floating Chatbot (Recommended)":
     else:
         # Floating corner trigger pill
         with st.container(key="corner_chat_trigger"):
-            if st.button("💬 Excel AI Chatbot", key="open_corner_chat", help="Open Excel AI Chatbot"):
+            if st.button("✨ Ask Excel AI Copilot", key="open_corner_chat", help="Open Excel AI Chatbot"):
                 st.session_state.chat_open = True
                 st.rerun()
 

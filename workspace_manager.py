@@ -34,6 +34,17 @@ _MODULE_OVERSIZE_FLAGS: OrderedDict[Tuple[str, int, int], bool] = OrderedDict()
 FORMULA_CELL_LIMIT = 20000
 
 
+def _flags_put(key: Tuple[str, int, int], value: bool) -> None:
+    """Stores oversize flag in bounded LRU cache (max entries ~50)."""
+    if not key:
+        return
+    if key in _MODULE_OVERSIZE_FLAGS:
+        _MODULE_OVERSIZE_FLAGS.move_to_end(key)
+    _MODULE_OVERSIZE_FLAGS[key] = value
+    while len(_MODULE_OVERSIZE_FLAGS) > MAX_CACHE_ENTRIES:
+        _MODULE_OVERSIZE_FLAGS.popitem(last=False)
+
+
 def _cache_put(cache_key: Tuple[str, int, int], eval_cache: Dict[str, Any], is_oversize: bool) -> None:
     """Stores entries in bounded LRU caches (max entries ~50)."""
     if cache_key in _MODULE_FORMULA_CACHE:
@@ -42,11 +53,7 @@ def _cache_put(cache_key: Tuple[str, int, int], eval_cache: Dict[str, Any], is_o
     while len(_MODULE_FORMULA_CACHE) > MAX_CACHE_ENTRIES:
         _MODULE_FORMULA_CACHE.popitem(last=False)
 
-    if cache_key in _MODULE_OVERSIZE_FLAGS:
-        _MODULE_OVERSIZE_FLAGS.move_to_end(cache_key)
-    _MODULE_OVERSIZE_FLAGS[cache_key] = is_oversize
-    while len(_MODULE_OVERSIZE_FLAGS) > MAX_CACHE_ENTRIES:
-        _MODULE_OVERSIZE_FLAGS.popitem(last=False)
+    _flags_put(cache_key, is_oversize)
 
 
 def get_file_cache_key(file_path: str | Path) -> Optional[Tuple[str, int, int]]:
@@ -99,6 +106,7 @@ def is_file_oversize(file_path: str | Path, limit: Optional[int] = None) -> bool
         limit = FORMULA_CELL_LIMIT
     key = get_file_cache_key(file_path)
     if key and key in _MODULE_OVERSIZE_FLAGS:
+        _MODULE_OVERSIZE_FLAGS.move_to_end(key)
         return _MODULE_OVERSIZE_FLAGS[key]
     try:
         p = Path(file_path).resolve()
@@ -109,7 +117,7 @@ def is_file_oversize(file_path: str | Path, limit: Optional[int] = None) -> bool
         wb.close()
         is_over = count > limit
         if key:
-            _MODULE_OVERSIZE_FLAGS[key] = is_over
+            _flags_put(key, is_over)
         return is_over
     except Exception:
         return False

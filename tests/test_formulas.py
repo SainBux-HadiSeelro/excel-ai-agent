@@ -314,3 +314,59 @@ def test_oversize_workbook_with_pure_formulas_reported_oversize(tmp_path):
     is_over = workspace_manager.is_file_oversize(p)
     assert is_over is True
 
+
+def test_oversize_flags_lru_cap():
+    import workspace_manager
+    workspace_manager.invalidate_formula_cache()
+
+    # Insert 60 distinct oversize flags
+    for i in range(60):
+        key = (f"file_{i}.xlsx", 1000 + i, 100 + i)
+        workspace_manager._flags_put(key, i % 2 == 0)
+
+    # Flags cache must not exceed MAX_CACHE_ENTRIES
+    assert len(workspace_manager._MODULE_OVERSIZE_FLAGS) <= workspace_manager.MAX_CACHE_ENTRIES
+    assert len(workspace_manager._MODULE_OVERSIZE_FLAGS) == workspace_manager.MAX_CACHE_ENTRIES
+
+    # First 10 entries should have been evicted (oldest)
+    for i in range(10):
+        assert (f"file_{i}.xlsx", 1000 + i, 100 + i) not in workspace_manager._MODULE_OVERSIZE_FLAGS
+
+    # Last 50 entries should remain present
+    for i in range(10, 60):
+        assert (f"file_{i}.xlsx", 1000 + i, 100 + i) in workspace_manager._MODULE_OVERSIZE_FLAGS
+
+    # Updating an existing key (hit) moves it to end without exceeding cap
+    hit_key = ("file_10.xlsx", 1010, 110)
+    workspace_manager._flags_put(hit_key, True)
+    assert len(workspace_manager._MODULE_OVERSIZE_FLAGS) == workspace_manager.MAX_CACHE_ENTRIES
+    assert list(workspace_manager._MODULE_OVERSIZE_FLAGS.keys())[-1] == hit_key
+
+
+def test_is_file_oversize_routes_through_flags_put(monkeypatch, tmp_path):
+    import workspace_manager
+    workspace_manager.invalidate_formula_cache()
+    p = tmp_path / "dummy.xlsx"
+    wb = openpyxl.Workbook()
+    wb.save(p)
+
+    called = []
+    orig_flags_put = workspace_manager._flags_put
+
+    def spy_flags_put(key, val):
+        called.append((key, val))
+        orig_flags_put(key, val)
+
+    monkeypatch.setattr(workspace_manager, "_flags_put", spy_flags_put)
+    is_over = workspace_manager.is_file_oversize(p)
+    assert is_over is False
+    assert len(called) == 1
+    key = workspace_manager.get_file_cache_key(p)
+    assert called[0] == (key, False)
+    assert workspace_manager._MODULE_OVERSIZE_FLAGS[key] is False
+
+    # Second call hits cache (move_to_end) without re-invoking _flags_put
+    assert workspace_manager.is_file_oversize(p) is False
+    assert len(called) == 1
+
+

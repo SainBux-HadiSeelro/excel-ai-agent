@@ -473,7 +473,7 @@ if "current_file_name" not in st.session_state:
 if "pending_confirmation" not in st.session_state:
     st.session_state.pending_confirmation = None
 if "chat_open" not in st.session_state:
-    st.session_state.chat_open = True
+    st.session_state.chat_open = False
 
 # Sidebar Configuration
 with st.sidebar:
@@ -725,7 +725,7 @@ st.markdown("""
         Interactive spreadsheet canvas with an autonomous AI chatbot docked in the corner. Ask in English or Roman Urdu!
     </div>
     <div>
-        <span class="badge-pill">💬 Corner Chatbot Active</span>
+        <span class="badge-pill">💬 Corner Chatbot Ready</span>
         <span class="badge-pill">🗣️ English & Roman Urdu</span>
         <span class="badge-pill">🛡️ Non-Destructive Sandbox</span>
         <span class="badge-pill">⚡ Live Excel Formulas</span>
@@ -771,7 +771,8 @@ if chat_view_mode == "Corner Floating Chatbot (Recommended)":
                     key="canvas_download"
                 )
         with col_tb4:
-            if st.button("💬 Toggle Corner Chatbot", key="canvas_toggle_chat", use_container_width=True):
+            toggle_label = "💬 Open Chatbot" if not st.session_state.chat_open else "💬 Minimize Chatbot"
+            if st.button(toggle_label, key="canvas_toggle_chat", use_container_width=True):
                 st.session_state.chat_open = not st.session_state.chat_open
                 st.rerun()
 
@@ -961,7 +962,31 @@ if chat_view_mode == "Corner Floating Chatbot (Recommended)":
 
 else:
     # ALTERNATIVE VIEW: Full Page Tabs
-    tab_chat, tab_preview = st.tabs(["💬 AI Chatbot", "📑 Live Sheet Preview"])
+    tab_preview, tab_chat = st.tabs(["📑 Live Sheet Preview", "💬 AI Chatbot"])
+
+    with tab_preview:
+        if not st.session_state.file_loaded:
+            st.info("👈 Abhi koi workbook loaded nahi hai. Nayi sheet banane ke liye chat mein task dein ya sample data load karein.")
+        else:
+            sheet_names = st.session_state.manager.get_sheet_names()
+            selected_sheet = st.selectbox("Select Sheet to View", options=sheet_names, key="tab_sheet_view_sel")
+            try:
+                curr_path = st.session_state.manager.get_current_file_path()
+                curr_stat = Path(curr_path).stat()
+                df, active_s, is_oversize = load_preview_cached(
+                    str(Path(curr_path).resolve()),
+                    curr_stat.st_mtime_ns,
+                    curr_stat.st_size,
+                    sheet_name=selected_sheet,
+                    max_rows=500
+                )
+                df = df.convert_dtypes()
+                for col in df.columns:
+                    if df[col].dtype == object:
+                        df[col] = df[col].astype("string")
+                st.dataframe(df, use_container_width=True, height=480)
+            except Exception as e:
+                st.error(f"Error reading sheet data: {str(e)}")
 
     with tab_chat:
         if st.session_state.file_loaded:
@@ -1053,27 +1078,3 @@ else:
         tab_prompt = tab_quick_selected or tab_chat_input
         if tab_prompt:
             run_agent_task(tab_prompt)
-
-    with tab_preview:
-        if not st.session_state.file_loaded:
-            st.info("👈 Abhi koi workbook loaded nahi hai. Nayi sheet banane ke liye chat mein task dein ya sample data load karein.")
-        else:
-            sheet_names = st.session_state.manager.get_sheet_names()
-            selected_sheet = st.selectbox("Select Sheet to View", options=sheet_names, key="tab_sheet_view_sel")
-            try:
-                curr_path = st.session_state.manager.get_current_file_path()
-                curr_stat = Path(curr_path).stat()
-                df, active_s, is_oversize = load_preview_cached(
-                    str(Path(curr_path).resolve()),
-                    curr_stat.st_mtime_ns,
-                    curr_stat.st_size,
-                    sheet_name=selected_sheet,
-                    max_rows=500
-                )
-                df = df.convert_dtypes()
-                for col in df.columns:
-                    if df[col].dtype == object:
-                        df[col] = df[col].astype("string")
-                st.dataframe(df, use_container_width=True, height=480)
-            except Exception as e:
-                st.error(f"Error reading sheet data: {str(e)}")

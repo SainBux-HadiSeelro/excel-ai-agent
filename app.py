@@ -87,33 +87,51 @@ st.set_page_config(
     initial_sidebar_state="auto"
 )
 
-# Custom CSS for modern polished interface
+# Custom CSS for ultra-modern 2026 Agentic AI interface
 st.markdown("""
 <style>
-    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+    @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap');
     
     html, body, [class*="css"] {
-        font-family: 'Inter', sans-serif;
+        font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
     }
     
+    code, pre, .trace-card {
+        font-family: 'JetBrains Mono', monospace !important;
+    }
+
     .main .block-container {
-        padding-top: 1.8rem;
-        padding-bottom: 3rem;
-        max-width: 1200px;
+        padding-top: 1.5rem;
+        padding-bottom: 3.5rem;
+        max-width: 1240px;
     }
     
-    /* Hero Banner */
+    /* Modern Glassmorphic Hero Banner */
     .hero-banner {
-        background: linear-gradient(135deg, #0F2027 0%, #203A43 50%, #2C5364 100%);
+        background: linear-gradient(135deg, #090D16 0%, #0F172A 45%, #1E1B4B 100%);
         color: white;
-        padding: 1.8rem 2.2rem;
-        border-radius: 16px;
-        margin-bottom: 1.5rem;
-        box-shadow: 0 10px 25px rgba(15, 32, 39, 0.15);
+        padding: 2rem 2.4rem;
+        border-radius: 20px;
+        margin-bottom: 1.4rem;
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        box-shadow: 0 20px 40px -15px rgba(15, 23, 42, 0.4), 0 0 0 1px rgba(99, 102, 241, 0.15);
+        position: relative;
+        overflow: hidden;
+    }
+    .hero-banner::after {
+        content: "";
+        position: absolute;
+        top: -50%;
+        right: -10%;
+        width: 320px;
+        height: 320px;
+        background: radial-gradient(circle, rgba(99, 102, 241, 0.25) 0%, rgba(56, 189, 248, 0) 70%);
+        pointer-events: none;
     }
     .hero-title {
-        font-size: 2rem;
-        font-weight: 700;
+        font-size: 2.1rem;
+        font-weight: 800;
+        letter-spacing: -0.02em;
         margin: 0;
         color: #FFFFFF;
         display: flex;
@@ -121,181 +139,130 @@ st.markdown("""
         gap: 12px;
     }
     .hero-subtitle {
-        font-size: 1rem;
-        color: #E2E8F0;
-        margin-top: 6px;
-        margin-bottom: 12px;
+        font-size: 1.02rem;
+        color: #CBD5E1;
+        margin-top: 8px;
+        margin-bottom: 16px;
+        line-height: 1.5;
+        max-width: 900px;
     }
     .badge-pill {
-        display: inline-block;
-        padding: 4px 12px;
-        background: rgba(255, 255, 255, 0.15);
-        backdrop-filter: blur(8px);
-        color: #F8FAFC;
-        border-radius: 20px;
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+        padding: 5px 13px;
+        background: rgba(255, 255, 255, 0.08);
+        backdrop-filter: blur(12px);
+        -webkit-backdrop-filter: blur(12px);
+        color: #F1F5F9;
+        border-radius: 9999px;
         font-size: 0.8rem;
-        font-weight: 500;
+        font-weight: 600;
         margin-right: 8px;
-        border: 1px solid rgba(255, 255, 255, 0.2);
+        margin-bottom: 6px;
+        border: 1px solid rgba(255, 255, 255, 0.18);
+        transition: all 0.2s ease;
+    }
+    .badge-pill:hover {
+        background: rgba(255, 255, 255, 0.15);
+        border-color: rgba(99, 102, 241, 0.4);
     }
     
-    /* Feature Welcome Cards */
+    /* Modern Bento Welcome Cards */
     .welcome-container {
         background: #FFFFFF;
         border: 1px solid #E2E8F0;
-        border-radius: 16px;
-        padding: 2rem;
-        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.03);
+        border-radius: 20px;
+        padding: 2.2rem;
+        box-shadow: 0 10px 30px -10px rgba(15, 23, 42, 0.06);
         margin-bottom: 1.5rem;
     }
-    .feature-card {
-        background: #F8FAFC;
+    .bento-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+        gap: 16px;
+        margin-top: 1.4rem;
+        margin-bottom: 1.4rem;
+    }
+    .bento-card {
+        background: linear-gradient(180deg, #F8FAFC 0%, #F1F5F9 100%);
         border: 1px solid #E2E8F0;
-        border-radius: 12px;
-        padding: 1.2rem;
-        height: 100%;
-        transition: transform 0.2s, box-shadow 0.2s;
+        border-radius: 14px;
+        padding: 1.25rem;
+        transition: transform 0.2s, box-shadow 0.2s, border-color 0.2s;
     }
-    .feature-card:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 6px 16px rgba(0,0,0,0.06);
+    .bento-card:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 12px 24px -6px rgba(15, 23, 42, 0.08);
+        border-color: #CBD5E1;
     }
-    .feature-icon {
+    .bento-icon {
         font-size: 1.8rem;
-        margin-bottom: 8px;
+        margin-bottom: 10px;
+        display: inline-block;
     }
-    .feature-title {
-        font-weight: 600;
-        font-size: 1rem;
-        color: #1E293B;
-        margin-bottom: 4px;
+    .bento-title {
+        font-weight: 700;
+        font-size: 0.98rem;
+        color: #0F172A;
+        margin-bottom: 6px;
     }
-    .feature-desc {
-        font-size: 0.85rem;
+    .bento-desc {
+        font-size: 0.84rem;
         color: #64748B;
-        line-height: 1.4;
+        line-height: 1.45;
     }
 
     /* Active File Pill */
     .file-status-bar {
-        background: #F0FDF4;
-        border: 1px solid #BBF7D0;
-        color: #166534;
-        padding: 10px 16px;
-        border-radius: 10px;
-        font-size: 0.9rem;
-        font-weight: 500;
+        background: linear-gradient(90deg, #F0FDF4 0%, #ECFDF5 100%);
+        border: 1px solid #86EFAC;
+        color: #14532D;
+        padding: 11px 18px;
+        border-radius: 12px;
+        font-size: 0.92rem;
+        font-weight: 600;
         display: flex;
         align-items: center;
-        gap: 8px;
+        gap: 10px;
         margin-bottom: 1.2rem;
+        box-shadow: 0 2px 8px rgba(34, 197, 94, 0.06);
     }
 
     /* Tool traces styling */
     .trace-card {
-        background: #F8FAFC;
-        border-left: 3px solid #3B82F6;
-        border-radius: 6px;
-        padding: 8px 12px;
+        background: #0F172A;
+        color: #E2E8F0;
+        border-left: 3px solid #6366F1;
+        border-radius: 8px;
+        padding: 10px 14px;
         margin: 6px 0;
-        font-family: monospace;
-        font-size: 0.85rem;
+        font-size: 0.82rem;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
     }
     
     /* Destructive Confirmation Box */
     .destructive-box {
-        background: #FEF2F2;
-        border: 1.5px solid #FCA5A5;
-        border-radius: 12px;
-        padding: 1.2rem;
+        background: #FFF1F2;
+        border: 1.5px solid #FDA4AF;
+        border-radius: 14px;
+        padding: 1.3rem;
         margin: 1.2rem 0;
+        box-shadow: 0 4px 16px rgba(225, 29, 72, 0.08);
     }
 
-    /* Mobile Responsiveness & Viewport Optimization */
-    @media (max-width: 768px) {
-        .main .block-container {
-            padding-top: 1rem !important;
-            padding-left: 0.75rem !important;
-            padding-right: 0.75rem !important;
-            padding-bottom: 2.5rem !important;
-        }
-        .hero-banner {
-            padding: 1.2rem 1rem !important;
-            border-radius: 12px !important;
-            margin-bottom: 1rem !important;
-        }
-        .hero-title {
-            font-size: 1.35rem !important;
-            gap: 6px !important;
-        }
-        .hero-subtitle {
-            font-size: 0.85rem !important;
-            margin-top: 4px !important;
-            margin-bottom: 10px !important;
-            line-height: 1.3 !important;
-        }
-        .badge-pill {
-            display: inline-block !important;
-            font-size: 0.7rem !important;
-            padding: 3px 8px !important;
-            margin-bottom: 4px !important;
-            margin-right: 4px !important;
-        }
-        .welcome-container {
-            padding: 1.2rem 1rem !important;
-            border-radius: 12px !important;
-            margin-bottom: 1rem !important;
-        }
-        .feature-card {
-            padding: 0.9rem !important;
-            margin-bottom: 8px !important;
-        }
-        .file-status-bar {
-            font-size: 0.8rem !important;
-            padding: 8px 10px !important;
-            line-height: 1.35 !important;
-            word-break: break-word !important;
-        }
-        .destructive-box {
-            padding: 1rem !important;
-            border-radius: 10px !important;
-        }
-        .stButton > button {
-            min-height: 44px !important;
-            font-size: 0.86rem !important;
-            padding: 8px 10px !important;
-            border-radius: 8px !important;
-        }
-        div[data-testid="stChatMessage"] {
-            padding: 8px 10px !important;
-        }
-        div[data-testid="stChatMessage"] p {
-            font-size: 0.9rem !important;
-            line-height: 1.4 !important;
-        }
-        div[data-testid="stMetricValue"] {
-            font-size: 1.2rem !important;
-        }
-        div[data-testid="stMetricLabel"] {
-            font-size: 0.78rem !important;
-        }
-        div[data-testid="stDataFrame"] {
-            overflow-x: auto !important;
-        }
-    }
-
-    /* Floating Corner Chatbot Widget ("kone m laga rhe") */
+    /* Floating Corner Chatbot Widget */
     .st-key-corner_chatbot {
         position: fixed !important;
         bottom: 24px !important;
         right: 24px !important;
-        width: 440px !important;
+        width: 450px !important;
         max-width: calc(100vw - 32px) !important;
-        height: 640px !important;
+        height: 650px !important;
         max-height: calc(100vh - 44px) !important;
         background: #FFFFFF !important;
-        border-radius: 20px !important;
-        box-shadow: 0 25px 60px -12px rgba(15, 23, 42, 0.3), 0 0 0 1px rgba(226, 232, 240, 0.9) !important;
+        border-radius: 24px !important;
+        box-shadow: 0 25px 65px -12px rgba(15, 23, 42, 0.35), 0 0 0 1px rgba(226, 232, 240, 0.9) !important;
         z-index: 999999 !important;
         display: flex !important;
         flex-direction: column !important;
@@ -307,7 +274,7 @@ st.markdown("""
     @keyframes cornerChatFadeIn {
         from {
             opacity: 0;
-            transform: translateY(18px) scale(0.97);
+            transform: translateY(20px) scale(0.96);
         }
         to {
             opacity: 1;
@@ -321,23 +288,23 @@ st.markdown("""
 
     /* Corner Chatbot Header */
     .corner-header-container {
-        background: linear-gradient(135deg, #0F172A 0%, #1E293B 100%);
-        padding: 12px 16px;
+        background: linear-gradient(135deg, #090D16 0%, #0F172A 60%, #1E1B4B 100%);
+        padding: 14px 18px;
         color: #FFFFFF;
         border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.12);
     }
 
     .chat-avatar-badge {
-        width: 36px;
-        height: 36px;
-        border-radius: 10px;
-        background: linear-gradient(135deg, #2563EB 0%, #7C3AED 100%);
+        width: 38px;
+        height: 38px;
+        border-radius: 12px;
+        background: linear-gradient(135deg, #3B82F6 0%, #8B5CF6 100%);
         display: flex;
         align-items: center;
         justify-content: center;
-        font-size: 1.15rem;
-        box-shadow: 0 4px 14px rgba(37, 99, 235, 0.4);
+        font-size: 1.25rem;
+        box-shadow: 0 4px 16px rgba(59, 130, 246, 0.45);
     }
 
     .pulsing-green-dot {
@@ -352,7 +319,7 @@ st.markdown("""
 
     @keyframes pulseDot {
         0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(34, 197, 94, 0.7); }
-        70% { transform: scale(1.1); box-shadow: 0 0 0 6px rgba(34, 197, 94, 0); }
+        70% { transform: scale(1.15); box-shadow: 0 0 0 6px rgba(34, 197, 94, 0); }
         100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(34, 197, 94, 0); }
     }
 
@@ -360,56 +327,58 @@ st.markdown("""
     .corner-welcome-card {
         background: linear-gradient(135deg, #F8FAFC 0%, #EFF6FF 100%);
         border: 1px solid #DBEAFE;
-        border-radius: 14px;
-        padding: 12px 14px;
-        margin-bottom: 8px;
+        border-radius: 16px;
+        padding: 14px 16px;
+        margin-bottom: 10px;
+        box-shadow: 0 2px 8px rgba(37, 99, 235, 0.04);
     }
 
     .corner-welcome-pill-list {
         display: flex;
         flex-wrap: wrap;
         gap: 6px;
-        margin-top: 6px;
+        margin-top: 8px;
     }
 
     .corner-task-badge {
         display: inline-block;
-        font-size: 0.72rem;
+        font-size: 0.74rem;
         font-weight: 600;
         color: #1E40AF;
         background: #DBEAFE;
-        padding: 3px 8px;
-        border-radius: 12px;
+        padding: 4px 10px;
+        border-radius: 9999px;
         border: 1px solid #BFDBFE;
     }
 
     /* Chat Messages styling */
     div[data-testid="stChatMessage"] {
-        border-radius: 12px !important;
-        padding: 8px 12px !important;
+        border-radius: 14px !important;
+        padding: 9px 13px !important;
         margin-bottom: 6px !important;
         border: 1px solid #F1F5F9 !important;
     }
 
     /* Quick Action Pills in Corner Chat */
     .st-key-corner_chatbot .stButton > button {
-        border-radius: 18px !important;
-        min-height: 30px !important;
-        height: 30px !important;
-        font-size: 0.76rem !important;
-        font-weight: 500 !important;
-        padding: 2px 8px !important;
+        border-radius: 9999px !important;
+        min-height: 32px !important;
+        height: 32px !important;
+        font-size: 0.78rem !important;
+        font-weight: 600 !important;
+        padding: 2px 10px !important;
         background: #F8FAFC !important;
         color: #334155 !important;
         border: 1px solid #E2E8F0 !important;
-        transition: all 0.15s ease !important;
+        transition: all 0.18s ease !important;
     }
 
     .st-key-corner_chatbot .stButton > button:hover {
-        background: #E2E8F0 !important;
-        color: #0F172A !important;
-        border-color: #CBD5E1 !important;
+        background: #EFF6FF !important;
+        color: #1D4ED8 !important;
+        border-color: #93C5FD !important;
         transform: translateY(-1px) !important;
+        box-shadow: 0 4px 10px rgba(37, 99, 235, 0.12) !important;
     }
 
     /* Floating Corner Trigger Pill (When Minimized) */
@@ -421,22 +390,35 @@ st.markdown("""
     }
 
     .st-key-corner_chat_trigger button {
-        border-radius: 32px !important;
-        padding: 12px 24px !important;
-        background: linear-gradient(135deg, #0F172A 0%, #1E293B 40%, #2563EB 100%) !important;
+        border-radius: 9999px !important;
+        padding: 13px 26px !important;
+        background: linear-gradient(135deg, #090D16 0%, #0F172A 40%, #2563EB 100%) !important;
         color: #FFFFFF !important;
-        font-weight: 600 !important;
-        font-size: 0.95rem !important;
+        font-weight: 700 !important;
+        font-size: 0.98rem !important;
         letter-spacing: 0.2px !important;
-        box-shadow: 0 12px 32px -4px rgba(37, 99, 235, 0.45), 0 4px 12px rgba(15, 23, 42, 0.2) !important;
-        border: 1.5px solid rgba(255, 255, 255, 0.35) !important;
+        box-shadow: 0 14px 34px -4px rgba(37, 99, 235, 0.5), 0 4px 14px rgba(15, 23, 42, 0.25) !important;
+        border: 1.5px solid rgba(255, 255, 255, 0.4) !important;
         transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1) !important;
     }
 
     .st-key-corner_chat_trigger button:hover {
         transform: translateY(-3px) scale(1.03) !important;
-        box-shadow: 0 16px 40px -4px rgba(37, 99, 235, 0.6), 0 6px 16px rgba(15, 23, 42, 0.3) !important;
-        border-color: rgba(255, 255, 255, 0.6) !important;
+        box-shadow: 0 18px 45px -4px rgba(37, 99, 235, 0.65), 0 6px 18px rgba(15, 23, 42, 0.35) !important;
+        border-color: rgba(255, 255, 255, 0.7) !important;
+    }
+
+    /* Modern Metric Cards */
+    div[data-testid="stMetric"] {
+        background: #FFFFFF;
+        border: 1px solid #E2E8F0;
+        border-radius: 14px;
+        padding: 12px 16px;
+        box-shadow: 0 2px 6px rgba(0, 0, 0, 0.02);
+    }
+    div[data-testid="stMetricValue"] {
+        font-weight: 700 !important;
+        color: #0F172A !important;
     }
 
     @media (max-width: 768px) {
@@ -445,8 +427,15 @@ st.markdown("""
             right: 6px !important;
             left: 6px !important;
             width: auto !important;
-            height: 80vh !important;
-            border-radius: 16px !important;
+            height: 82vh !important;
+            border-radius: 18px !important;
+        }
+        .hero-banner {
+            padding: 1.3rem 1.1rem !important;
+            border-radius: 14px !important;
+        }
+        .hero-title {
+            font-size: 1.4rem !important;
         }
     }
 </style>
@@ -477,10 +466,10 @@ if "chat_open" not in st.session_state:
 
 # Sidebar Configuration
 with st.sidebar:
-    st.markdown("### 📊 **Excel AI Settings**")
-    st.caption("Multilingual Spreadsheet Agent • English & Roman Urdu")
+    st.markdown("### 📊 **Excel AI Control Panel**")
+    st.caption("Autonomous Agentic Copilot • English & Roman Urdu")
 
-    st.markdown("#### 1. 🤖 Provider & Model")
+    st.markdown("#### 1. 🤖 Intelligence Engine")
     has_any_key = any(
         os.getenv(k) for k in ["GEMINI_API_KEY", "GOOGLE_API_KEY", "OPENAI_API_KEY", "ANTHROPIC_API_KEY"]
     )
@@ -523,7 +512,7 @@ with st.sidebar:
         st.info("💡 **No API key?** Switch Provider to **'Offline Demo (Mock)'** above to test instantly without an API key.")
 
     st.markdown("---")
-    st.markdown("#### 2. 📂 Workbook Actions")
+    st.markdown("#### 2. 📂 Workbook Sandbox")
     uploaded_file = st.file_uploader(
         "Upload Excel (.xlsx) or CSV",
         type=["xlsx", "csv"]
@@ -608,7 +597,7 @@ with st.sidebar:
     st.markdown("---")
     # Status & Undo Controls
     history_count = st.session_state.manager.get_history_count()
-    st.markdown(f"**🔄 Undo History:** `{history_count}` snapshot(s)")
+    st.markdown(f"**🔄 Reversible Snapshots:** `{history_count}` state(s)")
 
     col_u1, col_u2 = st.columns(2)
     with col_u1:
@@ -630,7 +619,7 @@ with st.sidebar:
             curr_path = st.session_state.manager.get_current_file_path()
             with open(curr_path, "rb") as f:
                 st.download_button(
-                    label="💾 Download",
+                    label="💾 Export XLSX",
                     data=f.read(),
                     file_name=f"updated_{st.session_state.current_file_name}",
                     mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
@@ -639,14 +628,14 @@ with st.sidebar:
 
     st.markdown("---")
     chat_view_mode = st.radio(
-        "Chatbot Position",
+        "Chatbot Interface Mode",
         options=["Corner Floating Chatbot (Recommended)", "Full Page Tabs"],
         index=0,
-        help="Dock the chatbot in the bottom-right corner or view full-page tabs."
+        help="Dock the copilot in the bottom-right corner or view full-page tabs."
     )
 
     st.markdown("---")
-    if st.button("🗑️ Clear Chat History", use_container_width=True):
+    if st.button("🗑️ Reset Chat History", use_container_width=True):
         st.session_state.messages = []
         st.session_state.traces = []
         st.session_state.pending_confirmation = None
@@ -715,21 +704,21 @@ def load_preview_cached(file_path_str: str, mtime_ns: int, size: int, sheet_name
     return load_sheet_dataframe(file_path_str, sheet_name=sheet_name, max_rows=max_rows)
 
 
-# Top Hero Banner
+# Top Hero Banner with Glassmorphic Elements
 st.markdown("""
 <div class="hero-banner">
     <div class="hero-title">
-        <span>📊 Excel AI Workspace</span>
+        <span>📊 Excel AI Copilot</span>
     </div>
     <div class="hero-subtitle">
-        Interactive spreadsheet canvas with an autonomous AI chatbot docked in the corner. Ask in English or Roman Urdu!
+        Autonomous multilingual spreadsheet intelligence engine. Formulates native Excel formulas, purges duplicates, normalizes messy datasets, and embeds charts via conversational Roman Urdu & English!
     </div>
     <div>
-        <span class="badge-pill">💬 Corner Chatbot Ready</span>
-        <span class="badge-pill">🗣️ English & Roman Urdu</span>
-        <span class="badge-pill">🛡️ Non-Destructive Sandbox</span>
-        <span class="badge-pill">⚡ Live Excel Formulas</span>
-        <span class="badge-pill">↩️ Instant Undo</span>
+        <span class="badge-pill">⚡ Autonomous Engine Live</span>
+        <span class="badge-pill">🗣️ Roman Urdu & English</span>
+        <span class="badge-pill">🛡️ Zero-Risk Sandbox</span>
+        <span class="badge-pill">🧮 Pure-Python Formula AST</span>
+        <span class="badge-pill">↩️ Reversible Undo Stack</span>
     </div>
 </div>
 """, unsafe_allow_html=True)
@@ -749,7 +738,7 @@ if chat_view_mode == "Corner Floating Chatbot (Recommended)":
 
         col_tb1, col_tb2, col_tb3, col_tb4 = st.columns([3, 1, 1, 2])
         with col_tb1:
-            selected_sheet = st.selectbox("Select Sheet to View", options=active_sheets, key="main_sheet_sel")
+            selected_sheet = st.selectbox("Select Active Worksheet", options=active_sheets, key="main_sheet_sel")
         with col_tb2:
             if st.button("↩️ Undo", key="canvas_undo", use_container_width=True, disabled=(st.session_state.manager.get_history_count() == 0)):
                 undo_res = st.session_state.manager.undo()
@@ -763,7 +752,7 @@ if chat_view_mode == "Corner Floating Chatbot (Recommended)":
             curr_path = st.session_state.manager.get_current_file_path()
             with open(curr_path, "rb") as f:
                 st.download_button(
-                    label="💾 Download",
+                    label="💾 Export XLSX",
                     data=f.read(),
                     file_name=f"updated_{st.session_state.current_file_name}",
                     mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
@@ -771,7 +760,7 @@ if chat_view_mode == "Corner Floating Chatbot (Recommended)":
                     key="canvas_download"
                 )
         with col_tb4:
-            toggle_label = "💬 Open Chatbot" if not st.session_state.chat_open else "💬 Minimize Chatbot"
+            toggle_label = "💬 Open AI Copilot" if not st.session_state.chat_open else "💬 Minimize Copilot"
             if st.button(toggle_label, key="canvas_toggle_chat", use_container_width=True):
                 st.session_state.chat_open = not st.session_state.chat_open
                 st.rerun()
@@ -795,7 +784,7 @@ if chat_view_mode == "Corner Floating Chatbot (Recommended)":
                 if df[col].dtype == object:
                     df[col] = df[col].astype("string")
 
-            # Metrics row
+            # Modern Metrics row
             mcol1, mcol2, mcol3, mcol4 = st.columns(4)
             with mcol1:
                 st.metric("Total Rows", f"{len(df):,}")
@@ -813,10 +802,34 @@ if chat_view_mode == "Corner Floating Chatbot (Recommended)":
     else:
         st.markdown("""
         <div class="welcome-container">
-            <h3 style="margin-top:0; color:#1E293B;">👋 Welcome to Excel AI Workspace!</h3>
-            <p style="color:#64748B; font-size:0.95rem;">
-                Apni <b>.xlsx</b> ya <b>.csv</b> spreadsheet upload karein, sample data load karein, ya <b>kone mein mojood AI Chatbot</b> se seedha koi bhi task dein!
+            <h3 style="margin-top:0; color:#0F172A; font-weight:800; font-size:1.4rem;">
+                👋 Welcome to the Autonomous Excel AI Workspace
+            </h3>
+            <p style="color:#64748B; font-size:0.98rem; line-height:1.5; margin-bottom:1rem;">
+                Apni spreadsheet upload karein ya sample data load karein. Hamara autonomous agent aapki <b>Roman Urdu</b> ya <b>English</b> instructions ko deterministic OpenXML operations mein tabdeel karega!
             </p>
+            <div class="bento-grid">
+                <div class="bento-card">
+                    <span class="bento-icon">🧮</span>
+                    <div class="bento-title">Dynamic Formula Synthesis</div>
+                    <div class="bento-desc">Static numbers ki bajaye live Excel formulas (<code>=SUM</code>, <code>=IF</code>, <code>=AVERAGE</code>) generate karta hai.</div>
+                </div>
+                <div class="bento-card">
+                    <span class="bento-icon">🛡️</span>
+                    <div class="bento-title">Safe Reversible Sandbox</div>
+                    <div class="bento-desc">Aapki asal file safe rehti hai; har modification se pehle automatic snapshot create hota hai.</div>
+                </div>
+                <div class="bento-card">
+                    <span class="bento-icon">🧹</span>
+                    <div class="bento-title">Intelligent Data Cleaning</div>
+                    <div class="bento-desc">Extra spaces trim karna, text casing theek karna, aur duplicate rows ko purge karna.</div>
+                </div>
+                <div class="bento-card">
+                    <span class="bento-icon">📈</span>
+                    <div class="bento-title">OpenXML Native Visualizations</div>
+                    <div class="bento-desc">Worksheets mein direct Bar, Column, Line aur Pie charts embed karta hai.</div>
+                </div>
+            </div>
         </div>
         """, unsafe_allow_html=True)
 
@@ -840,7 +853,7 @@ if chat_view_mode == "Corner Floating Chatbot (Recommended)":
                 })
                 st.rerun()
 
-    # DOCKED CORNER CHATBOT WIDGET ("kone m laga rhe")
+    # DOCKED CORNER CHATBOT WIDGET
     corner_quick_selected = None
     if st.session_state.chat_open:
         with st.container(key="corner_chatbot"):
@@ -849,10 +862,10 @@ if chat_view_mode == "Corner Floating Chatbot (Recommended)":
             with col_ch1:
                 st.markdown(
                     f"""
-                    <div style="display:flex; align-items:center; gap:10px; padding:10px 12px 6px 12px;">
+                    <div style="display:flex; align-items:center; gap:12px; padding:12px 14px 6px 14px;">
                         <div class="chat-avatar-badge">🤖</div>
                         <div>
-                            <div style="font-weight:700; font-size:0.95rem; color:#0F172A; line-height:1.2;">
+                            <div style="font-weight:700; font-size:0.98rem; color:#0F172A; line-height:1.2;">
                                 Excel AI Copilot
                             </div>
                             <div style="font-size:0.75rem; color:#64748B; display:flex; align-items:center; gap:6px; margin-top:2px;">
@@ -865,7 +878,7 @@ if chat_view_mode == "Corner Floating Chatbot (Recommended)":
                     unsafe_allow_html=True
                 )
             with col_ch2:
-                st.markdown("<div style='padding-top:10px;'>", unsafe_allow_html=True)
+                st.markdown("<div style='padding-top:12px;'>", unsafe_allow_html=True)
                 if st.button("➖", key="minimize_corner_chat", help="Minimize corner chatbot"):
                     st.session_state.chat_open = False
                     st.rerun()
@@ -877,11 +890,11 @@ if chat_view_mode == "Corner Floating Chatbot (Recommended)":
                     st.markdown(
                         """
                         <div class="corner-welcome-card">
-                            <div style="font-size:1rem; font-weight:700; color:#1E293B; margin-bottom:4px;">
+                            <div style="font-size:1.02rem; font-weight:700; color:#0F172A; margin-bottom:4px;">
                                 👋 Assalam-o-Alaikum!
                             </div>
-                            <p style="font-size:0.84rem; color:#475569; margin:0 0 8px 0; line-height:1.4;">
-                                Main aapka <b>Excel AI Copilot</b> hoon. Jo task aap denge, main spreadsheet par live execute karta rahoonga!
+                            <p style="font-size:0.85rem; color:#475569; margin:0 0 8px 0; line-height:1.45;">
+                                Main aapka <b>Excel AI Copilot</b> hoon. Jo task aap denge, main spreadsheet par live deterministic execution karta rahoonga!
                             </p>
                             <div class="corner-welcome-pill-list">
                                 <span class="corner-task-badge">⚡ Live Formulas</span>
@@ -898,7 +911,7 @@ if chat_view_mode == "Corner Floating Chatbot (Recommended)":
                     with st.chat_message(msg["role"]):
                         st.markdown(msg["content"])
                         if "traces" in msg and msg["traces"]:
-                            with st.expander(f"🛠️ Tool Traces ({len(msg['traces'])})"):
+                            with st.expander(f"🛠️ Agent Execution Traces ({len(msg['traces'])})"):
                                 for t in msg["traces"]:
                                     st.markdown(f"**Step {t.step}: `{t.tool_name}`**")
                                     st.json({"arguments": t.arguments, "result": t.result})
@@ -932,7 +945,7 @@ if chat_view_mode == "Corner Floating Chatbot (Recommended)":
                             st.rerun()
 
             # Compact Quick Action Tasks (4 pills)
-            st.markdown("<p style='font-size:0.74rem; font-weight:600; color:#64748B; margin:4px 0 2px 8px;'>⚡ QUICK PROMPTS:</p>", unsafe_allow_html=True)
+            st.markdown("<p style='font-size:0.75rem; font-weight:700; color:#64748B; margin:4px 0 2px 8px; letter-spacing:0.5px;'>⚡ QUICK PROMPTS:</p>", unsafe_allow_html=True)
             qp1, qp2, qp3, qp4 = st.columns(4)
             with qp1:
                 if st.button("📊 Total", key="qp_corner_total", use_container_width=True):
@@ -962,7 +975,7 @@ if chat_view_mode == "Corner Floating Chatbot (Recommended)":
 
 else:
     # ALTERNATIVE VIEW: Full Page Tabs
-    tab_preview, tab_chat = st.tabs(["📑 Live Sheet Preview", "💬 AI Chatbot"])
+    tab_preview, tab_chat = st.tabs(["📑 Live Sheet Preview", "💬 AI Copilot"])
 
     with tab_preview:
         if not st.session_state.file_loaded:
@@ -1007,7 +1020,7 @@ else:
                 unsafe_allow_html=True
             )
 
-        st.markdown("<p style='font-size:0.85rem; font-weight:600; color:#64748B; margin-bottom:6px;'>⚡ QUICK PROMPTS:</p>", unsafe_allow_html=True)
+        st.markdown("<p style='font-size:0.85rem; font-weight:700; color:#64748B; margin-bottom:6px;'>⚡ QUICK PROMPTS:</p>", unsafe_allow_html=True)
         qrow1_c1, qrow1_c2 = st.columns(2)
         tab_quick_selected = None
 
@@ -1042,7 +1055,7 @@ else:
             with st.chat_message(msg["role"]):
                 st.markdown(msg["content"])
                 if "traces" in msg and msg["traces"]:
-                    with st.expander(f"🛠️ Tool Execution Traces ({len(msg['traces'])} action(s))"):
+                    with st.expander(f"🛠️ Agent Execution Traces ({len(msg['traces'])} action(s))"):
                         for t in msg["traces"]:
                             st.markdown(f"**Step {t.step}: `{t.tool_name}`**")
                             st.json({"arguments": t.arguments, "result": t.result})

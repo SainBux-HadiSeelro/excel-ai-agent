@@ -1,143 +1,275 @@
 <div align="center">
 
 # 📊 Excel AI Agent
-### *Autonomous Multilingual Spreadsheet Assistant (English & Roman Urdu)*
+### *Autonomous Multilingual Spreadsheet Intelligence Engine*
 
-[![Live Demo](https://img.shields.io/badge/Live_Demo-Streamlit_App-FF4B4B?style=for-the-badge&logo=streamlit&logoColor=white)](https://excel-agent-ai.streamlit.app/)
-[![Python](https://img.shields.io/badge/Python-3.11%2B-blue?style=for-the-badge&logo=python&logoColor=white)](https://python.org)
-[![Streamlit](https://img.shields.io/badge/Streamlit-1.42%2B-FF4B4B?style=for-the-badge&logo=streamlit&logoColor=white)](https://streamlit.io)
-[![Status: Live](https://img.shields.io/badge/Status-Live-00ff66?style=for-the-badge)](https://excel-agent-ai.streamlit.app/)
+[![Live Demo](https://img.shields.io/badge/Live_Demo-Streamlit_Cloud-FF4B4B?style=for-the-badge&logo=streamlit&logoColor=white)](https://excel-agent-ai.streamlit.app/)
+[![Technical Spec](https://img.shields.io/badge/Architecture-SPEC.md-0A66C2?style=for-the-badge&logo=markdown&logoColor=white)](SPEC.md)
+[![Python Version](https://img.shields.io/badge/Python-3.11%20%7C%203.12-3776AB?style=for-the-badge&logo=python&logoColor=white)](https://python.org)
+[![Agent Paradigm](https://img.shields.io/badge/Architecture-ReAct%20Tool--Calling-8A2BE2?style=for-the-badge&logo=openai&logoColor=white)](SPEC.md)
+[![Multilingual](https://img.shields.io/badge/Languages-English%20%7C%20Roman%20Urdu-228B22?style=for-the-badge)](https://excel-agent-ai.streamlit.app/)
+[![Security](https://img.shields.io/badge/Safety-Isolated%20Sandbox%20%2B%20HITL-FF8C00?style=for-the-badge)](SPEC.md#5-safety-sandboxing--integrity-architecture)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg?style=for-the-badge)](https://opensource.org/licenses/MIT)
 
 <br/>
 
-### 🌐 **[👉 Click Here to Open Live Demo (excel-agent-ai.streamlit.app)](https://excel-agent-ai.streamlit.app/)**
+### 🌐 **[👉 Open Live Interactive Web App (excel-agent-ai.streamlit.app)](https://excel-agent-ai.streamlit.app/)**
 
-[🎮 Live Web App](https://excel-agent-ai.streamlit.app/) • [📋 Technical Specification](SPEC.md) • [🌟 Features](#-key-features) • [📸 Screenshots](#-screenshots) • [💬 Example Prompts](#-10-example-prompts-english--roman-urdu) • [🚀 Quick Start](#-quickstart--setup) • [🧰 Tools Reference](#-available-tools-reference)
+[🎮 Live Web App](https://excel-agent-ai.streamlit.app/) • [📋 System Architecture & SPEC](SPEC.md) • [🧠 The Agentic Paradigm](#-the-agentic-paradigm) • [🌟 Core Capabilities](#-core-autonomous-capabilities) • [🏗️ System Architecture](#%EF%B8%8F-agentic-system-architecture) • [💬 Prompts Showcase](#-multilingual-prompt-showcase) • [🧰 Tools Registry](#-21-autonomous-tools-registry) • [🐍 Python SDK Usage](#-programmatic-agent-sdk-usage) • [🚀 Quickstart](#-quickstart--local-setup) • [🧪 Testing](#-testing--verification)
 
 ---
 
 </div>
 
-## 📖 About the Project & Live Demo
+## 💡 The Agentic Paradigm
 
-**Excel AI Agent** is a production-quality autonomous spreadsheet assistant in Python that interprets natural language instructions in **English** and **Roman Urdu** (e.g., *"total sales nikalo"*, *"duplicates hata do"*, *"region ke hisaab se chart banao"*, *"do files merge karo"*) and executes them safely and reliably on Excel (`.xlsx`) files.
+Traditional chatbots and generic LLM wrappers fail when interacting with spreadsheets: they attempt to write entire scripts via code-interpreters, hallucinate CSV rows, overwrite existing OpenXML formulas, or crash with context window overflows.
 
-- 🌐 **Live Web App**: [https://excel-agent-ai.streamlit.app/](https://excel-agent-ai.streamlit.app/)
-- 🚀 **Instant Evaluation**: No installation or local setup required—open the link, upload your workbook or click "Load Sample Data", and start chatting with the agent immediately.
-- 🛡️ **Safe & Non-Destructive**: Isolated workspace with automatic snapshots, one-click undo, and confirmation guards for deletions.
-
----
-
-## 🌟 Key Features
-
-- **Multilingual Understanding**: Seamlessly understands and responds in both **English** and **Roman Urdu**.
-- **21 Built-in Tools**: Full suite of spreadsheet operations including reading, writing formulas, cleaning, deduplication, sorting, filtering, pivot tables, native Excel charts, sheet management, and merging.
-- **Safety First (Non-Destructive & Isolated)**:
-  - Never touches or overwrites your original file; works strictly inside an isolated `workspace/<session_id>` session folder.
-  - Automatic version snapshotting before every modifying action.
-  - **Granular Single-Step Undo**: Each Undo reverts exactly one mutation, with an accurate live undo step counter in the UI.
-  - **Bound Confirmation Guards**: Destructive actions (deleting sheets, rows, columns, removing duplicates) pause execution for user confirmation and bind strictly to the exact approved tool arguments upon execution without allowing the LLM to change parameters.
-  - **Session Isolation & Auto-Cleanup**: User uploads are stored in unique per-session directories with sanitized filenames; stale sessions older than 24 hours (configurable via `EXCEL_SESSION_MAX_AGE_HOURS`) are automatically purged on startup.
-- **Tiered Live Formula Evaluation**:
-  - Dynamically evaluates formulas in preview and agent reads using a pure-Python engine (`formulas`), supporting functions like `SUMIF`, `AVERAGE`, `IF`, `COUNTIF`, and nested expressions without heavy external processes.
-  - Automatically utilizes headless LibreOffice recalculation when available on `PATH`, and falls back to regex arithmetic as a safety net. Never crashes on complex or unknown formulas.
-- **Post-Write Verification**: Re-reads affected cell ranges after every write to verify correctness.
-- **Large File Optimization & Context Management**: Samples 50k+ row datasets, caps LLM tool output history at ~4,000 characters to conserve tokens, and enforces bounded conversation history without splitting tool calls.
-- **Flexible LLM Provider Support**: Compatible with Google **Gemini** (`gemini-3.8-flash`), **OpenAI** (`gpt-6-luna`), **Anthropic** (`claude-haiku-5-5`), and an offline **Mock/Demo mode** for evaluation without API keys.
-- **Dual Interfaces**: Interactive **Streamlit Web UI** and terminal **CLI REPL**.
-
----
-
-## 📸 Screenshots
-
-![Main Interface](docs/screenshots/app_main.png)
-*Interactive Streamlit UI with file status bar, quick action pills, and chat panel.*
-
-![Chat and Tool Execution Traces](docs/screenshots/chat_traces.png)
-*Live collapsible tool execution traces with parameters, inspection results, and destructive confirmation cards.*
-
-![Sheet Preview and Live Formulas](docs/screenshots/sheet_preview.png)
-*Sheet preview table displaying evaluated formulas and data metrics.*
-
-> [!NOTE]
-> Community Cloud free Streamlit applications may enter sleep mode when inactive. If the app displays a sleep screen, simply click the **"Yes, get this app back up!"** button to wake it up in a few seconds.
-
----
-
-## 📁 Project Structure
+**Excel AI Agent** implements a deterministic **Agentic Tool-Use Architecture** (ReAct pattern) designed specifically for production data manipulation:
 
 ```text
-excel-ai-agent/
-├── app.py                     # Streamlit Web UI (Upload, Chat, Traces, Preview, Download, Undo)
-├── cli.py                     # Terminal CLI interface (python cli.py file.xlsx)
-├── agent.py                   # Autonomous tool-calling loop (history cap, bounded steps)
-├── llm.py                     # Provider abstraction (Gemini, OpenAI, Anthropic, Mock)
-├── workspace_manager.py       # Safe isolated workspace, snapshotting, undo, formula evaluator
-├── generate_sample_data.py    # Sample dataset generator script
-├── verify_end_to_end.py       # End-to-end integration test runner
-├── tools/
-│   ├── __init__.py
-│   ├── inspection.py          # list_sheets, read_range, get_sheet_summary
-│   ├── editing.py             # write_cells (formulas + verification), find_and_replace, clean_data
-│   ├── structure.py           # create_sheet, delete_sheet, rename_sheet, insert/delete rows & cols
-│   ├── analysis.py            # remove_duplicates, sort_data, filter_data, create_pivot_summary
-│   ├── formatting.py          # format_range (bold, colors, borders, number formats, auto-fit)
-│   ├── visualization.py       # add_chart (Bar, Column, Line, Pie)
-│   ├── workbook_ops.py        # merge_workbooks, undo_last_change
-│   └── registry.py            # Tool dispatcher & JSON schemas (21 tools)
-├── tests/
-│   ├── test_inspection.py
-│   ├── test_editing.py
-│   ├── test_structure.py
-│   ├── test_analysis.py
-│   ├── test_formatting_and_chart.py
-│   ├── test_formulas.py       # Tests for SUMIF, AVERAGE, IF, nested formulas
-│   ├── test_ui_escaping.py    # Tests for HTML escaping in Streamlit
-│   ├── test_cleanup_and_uploads.py # Tests for upload isolation and session cleanup
-│   ├── test_workbook_ops.py
-│   └── test_agent_loop.py
-├── sample_data/
-│   ├── sales.xlsx             # Realistic dataset with formulas, messy text & duplicates
-│   └── regional_extra.xlsx    # Secondary workbook for testing merges
-├── docs/
-│   └── screenshots/           # UI screenshots
-├── .github/
-│   └── workflows/
-│       └── ci.yml             # GitHub Actions CI for Python 3.11 & 3.12
-├── requirements.txt           # Runtime dependencies
-├── requirements-dev.txt       # Development & test dependencies
-├── .env.example
-├── SPEC.md                    # Technical & Functional Specification Document
-└── README.md
+                  ┌──────────────────────────────────────────────┐
+                  │          Natural Language Prompt             │
+                  │       (English or Roman Urdu query)          │
+                  └──────────────────────┬───────────────────────┘
+                                         ▼
+                  ┌──────────────────────────────────────────────┐
+                  │           Perception & Language              │
+                  │    Extracts intent, preserves user idiom     │
+                  └──────────────────────┬───────────────────────┘
+                                         ▼
+     ┌────────────────────────────────────────────────────────────────────────┐
+     │                     AUTONOMOUS AGENT REASONING CORE                    │
+     │                                                                        │
+     │  1. INSPECTION FIRST: Reads workbook schema, headers & data types     │
+     │  2. ACTION PLANNING: Selects optimal sequence from 21 specialized tools│
+     │  3. DYNAMIC FORMULAS: Synthesizes live Excel expressions (=SUM, =IF)  │
+     │  4. SAFETY INTERCEPT: Pauses on destructive operations for approval    │
+     │  5. VERIFICATION: Re-reads written cells & self-corrects on syntax err │
+     └───────────────────────────────────┬────────────────────────────────────┘
+                                         ▼
+                  ┌──────────────────────────────────────────────┐
+                  │          Sandboxed OpenXML Workspace         │
+                  │  (Pre-mutation snapshots, 1-step undo stack) │
+                  └──────────────────────────────────────────────┘
+```
+
+> [!TIP]
+> **Zero Data Loss Guarantee**: The user's original file is marked read-only and preserved untouched. All operations execute inside an isolated session directory (`workspace/<session_id>/`) with automated incremental version snapshots.
+
+---
+
+## 🌟 Core Autonomous Capabilities
+
+### 1. 🌐 Native Roman Urdu & English Understanding
+Understands real-world colloquial spreadsheet commands in Roman Urdu without requiring formal grammar:
+- *"Total sales nikalo aur formula H25 mein likh do"* ➔ Inspects headers, locates `Total_Revenue`, writes `=SUM(H2:H24)`.
+- *"Order_ID ke hisaab se duplicates hata do"* ➔ Samples duplicates, displays interactive confirmation card, purges only after user consent.
+- *"Region ke hisaab se sales ka column chart banao"* ➔ Extracts categories, creates native OpenXML Column Chart.
+
+### 2. 🛡️ Human-in-the-Loop (HITL) Bound Safety Guards
+Destructive actions (`delete_sheet`, `delete_rows`, `delete_columns`, `remove_duplicates`) cannot execute autonomously without explicit approval. The agent calculates the exact blast radius, halts execution, and binds the approval token to strictly prevent the LLM from altering parameters upon execution.
+
+### 3. ⚡ Tiered Live Formula Engine
+Spreadsheet changes reflect real-time computed outputs in the UI:
+- **Tier 1 (Pure Python AST)**: Evaluates functions like `SUM`, `AVERAGE`, `IF`, `COUNTIF`, and nested algebra in-memory via `formulas`.
+- **Tier 2 (Headless LibreOffice)**: Invoked when present on `PATH` for multi-sheet external dependencies.
+- **Tier 3 (Safe Regex & Fallback)**: Arithmetic evaluation and graceful degradation ensuring error codes (`#DIV/0!`, `#N/A`) never crash JSON serialization.
+
+### 4. 🔄 Granular Single-Step Reversible Undo Engine
+Every modifying action triggers `WorkspaceManager.create_snapshot()`. Clicking **Undo** restores the exact state before the last tool execution, with a live undo counter in the UI.
+
+### 5. 🧠 Bounded Context Window & Auto-Compaction
+Large files with 50,000+ rows are safely inspected through intelligent header scanning and subset sampling. Tool results are capped at `4,000 characters` with sliding conversational history to prevent LLM token exhaustion.
+
+### 6. 🔌 Provider-Agnostic LLM Engine
+Switch providers dynamically at runtime or evaluate completely offline:
+- **Google Gemini**: `gemini-3.8-flash` (Fast, native function calling)
+- **OpenAI**: `gpt-4o` / `gpt-4o-mini`
+- **Anthropic**: `claude-3-5-haiku-20241022`
+- **Mock Evaluator**: Deterministic offline mode for testing and demonstrations without API keys.
+
+---
+
+## 🏗️ Agentic System Architecture
+
+```mermaid
+flowchart TD
+    User([User / Operator])
+    
+    subgraph UI_Layer ["Interface & Interaction Layer"]
+        StreamlitUI["Modern Streamlit Web App (app.py)"]
+        ChatbotWidget["Floating Glassmorphism Chatbot Dock"]
+        CLI["Terminal REPL Engine (cli.py)"]
+    end
+    
+    subgraph Cognitive_Core ["Autonomous Agent Engine (agent.py)"]
+        ReActLoop["ReAct Execution Loop (Max 15 Steps)"]
+        ContextMgr["Bounded Context & String Compactor"]
+        ConfirmationGuard{"Destructive Confirmation Guard"}
+        SelfCorrection["Post-Write Verification & Reflection"]
+    end
+    
+    subgraph LLM_Providers ["LLM Provider Abstraction (llm.py)"]
+        Gemini["Google Gemini Client"]
+        OpenAI["OpenAI Client"]
+        Anthropic["Anthropic Client"]
+        Mock["Deterministic Mock Engine"]
+    end
+    
+    subgraph Tool_Dispatcher ["21 Function Calling Tools (tools/)"]
+        Inspect["Inspection (list_sheets, read_range, get_sheet_summary)"]
+        Edit["Editing (write_cells, find_and_replace, clean_data)"]
+        Structure["Structure (create, delete, rename, row/col CRUD)"]
+        Analysis["Analysis (remove_duplicates, sort, filter, pivot)"]
+        FormatChart["Formatting & OpenXML Native Visualizations"]
+        Ops["Workbook Ops (merge_workbooks, undo_last_change)"]
+    end
+    
+    subgraph Workspace_Sandboxing ["Isolated Sandboxed Environment (workspace_manager.py)"]
+        SessionSandbox["Session Sandbox: workspace/<session_id>/"]
+        SnapshotStack[("Snapshot Stack (snapshot_001.xlsx ...)")]
+        ActiveFile[("active_workbook.xlsx")]
+        FormulaEngine["Tiered Formula Evaluator"]
+    end
+
+    User -->|English / Roman Urdu Prompts| UI_Layer
+    StreamlitUI --> Cognitive_Core
+    CLI --> Cognitive_Core
+    Cognitive_Core <-->|JSON Schema Function Calls| LLM_Providers
+    Cognitive_Core --> ConfirmationGuard
+    ConfirmationGuard -- Safe --> Tool_Dispatcher
+    ConfirmationGuard -- Destructive --> User
+    Tool_Dispatcher --> Workspace_Sandboxing
+    Workspace_Sandboxing --> FormulaEngine
+    Workspace_Sandboxing --> SnapshotStack
+    Tool_Dispatcher --> SelfCorrection
+    SelfCorrection --> ReActLoop
 ```
 
 ---
 
-## 🛠️ Tech Stack & Requirements
+## 📸 Interface Preview & Tool Execution Traces
 
-- **Python**: 3.11+ (Tested on Python 3.11 & 3.12)
-- **openpyxl**: Editing cell values, formulas, formatting, and charts
-- **pandas**: High-performance data manipulation, filtering, and pivot aggregations
-- **formulas**: Pure-Python Excel formula evaluation engine
-- **streamlit**: Web UI with live tool execution traces and interactive sheet preview
-- **pytest**: Test suite with 100% pass rate (39 passed tests)
+<div align="center">
+
+| Main Application Canvas | Live Tool Execution Traces |
+|:---:|:---:|
+| Interactive spreadsheet viewer with real-time evaluated formulas, status metrics, and download triggers. | Transparent collapsible step-by-step reasoning traces showing tool arguments, return data, and execution timing. |
+
+</div>
+
+> [!NOTE]
+> Free tier Streamlit Community Cloud apps may sleep after inactivity. If you see a sleep prompt on the live link, click **"Yes, get this app back up!"** to activate it within seconds.
 
 ---
 
-## 🚀 Quickstart & Setup
+## 💬 Multilingual Prompt Showcase
 
-### 1. Clone & Set Up Virtual Environment
+The agent handles both technical analytical English and conversational Roman Urdu:
+
+| # | Task | Language | Example Natural Language Prompt | Autonomous Agent Strategy |
+|:---:|---|:---:|---|---|
+| 1 | **Total Calculation** | Roman Urdu | `total sales nikalo aur formula H25 mein likh do` | Inspects row range, synthesizes `=SUM(H2:H24)`, verifies write |
+| 2 | **Deduplication** | Roman Urdu | `Order_ID ke hisaab se duplicates hata do` | Identifies duplicate rows, pauses for HITL approval, removes after consent |
+| 3 | **Chart Generation** | Roman Urdu | `Targets sheet mein region ke hisaab se column chart banao` | Locates category labels & data series, embeds native OpenXML chart |
+| 4 | **Data Cleaning** | Roman Urdu | `Sales Rep column D ke extra spaces hatao aur text ko title case kardo` | Trims leading/trailing whitespace and normalizes character casing |
+| 5 | **Workbook Merging** | Roman Urdu | `sample_data/regional_extra.xlsx file ko is workbook mein merge karo` | Inspects secondary workbook sheets and merges tabs into session |
+| 6 | **Dynamic Aggregate** | English | `Calculate total units and total revenue using Excel SUM formulas at the bottom` | Discovers column bounds, adds dynamic formula totals to footer rows |
+| 7 | **Pivot Summary** | English | `Create a pivot summary grouped by Region showing the sum of Units` | Runs pandas aggregation, formats output table on a dedicated sheet |
+| 8 | **Conditional Filter** | English | `Filter all rows where Region is 'North' and save them to a new sheet called 'North_Sales'` | Evaluates boolean condition, creates tab, writes matching rows |
+| 9 | **Find & Replace** | English | `Find all occurrences of 'Laptop' and replace with 'Notebook'` | Performs atomic string replacements with match count telemetry |
+| 10 | **Styling & Formatting** | English | `Make header row A1:I1 bold, dark blue background, white text, and auto-fit columns` | Applies openpyxl styles, hex fills, border rules, and column widths |
+
+---
+
+## 🧰 21 Autonomous Tools Registry
+
+All tools are registered with standard JSON schemas in [`tools/registry.py`](file:///d:/1-New%20folder/excel/tools/registry.py):
+
+```text
+tools/
+├── inspection.py
+│   ├── list_sheets()           # Enumerates all sheets, tab index, and dimensions
+│   ├── read_range()            # Reads cell values or raw formulas with row limits
+│   └── get_sheet_summary()     # Scans headers, data types, nulls, and sample rows (50k+ safe)
+├── editing.py
+│   ├── write_cells()           # Writes values/formulas with post-write verification
+│   ├── find_and_replace()      # Searches and substitutes strings or numbers
+│   └── clean_data()            # Trims whitespace, fixes casing, parses dates/numbers
+├── structure.py
+│   ├── create_sheet()          # Adds new sheet tab with collision checks
+│   ├── rename_sheet()          # Renames existing sheets
+│   ├── delete_sheet()          # [DESTRUCTIVE] Drops sheet (Requires confirmation)
+│   ├── insert_rows()           # Inserts blank rows before row_idx
+│   ├── delete_rows()           # [DESTRUCTIVE] Deletes rows (Requires confirmation)
+│   ├── insert_columns()        # Inserts blank columns before col_idx
+│   └── delete_columns()        # [DESTRUCTIVE] Deletes columns (Requires confirmation)
+├── analysis.py
+│   ├── remove_duplicates()     # [DESTRUCTIVE] Purges duplicate rows (Requires confirmation)
+│   ├── sort_data()             # Sorts ascending or descending by one or more columns
+│   ├── filter_data()           # Filters rows by condition into preview or new sheet
+│   └── create_pivot_summary()  # Generates pandas pivot aggregation summary table
+├── formatting.py
+│   └── format_range()          # Sets fonts, colors, borders, number formats, auto-fits
+├── visualization.py
+│   └── add_chart()             # Embeds native Excel Bar, Column, Line, or Pie charts
+└── workbook_ops.py
+    ├── merge_workbooks()       # Merges sheets or appends rows from external workbooks
+    └── undo_last_change()      # Rolls back active workbook to previous snapshot
+```
+
+---
+
+## 🐍 Programmatic Agent SDK Usage
+
+AI developers can embed the `ExcelAgent` directly into custom agentic workflows, multi-agent frameworks, or backend microservices:
+
+```python
+from workspace_manager import WorkspaceManager
+from llm import get_llm_provider
+from agent import ExcelAgent
+
+# 1. Initialize isolated sandboxed workspace
+manager = WorkspaceManager.create_session("my_sales_data.xlsx")
+
+# 2. Select LLM provider (gemini, openai, anthropic, or mock)
+provider = get_llm_provider("gemini")
+
+# 3. Instantiate the autonomous agent loop
+agent = ExcelAgent(manager=manager, provider=provider, max_steps=15)
+
+# 4. Dispatch natural language query in English or Roman Urdu
+result = agent.run("Total revenue ka formula column H ke aakhir mein daalo")
+
+# 5. Access execution telemetry and inspect traces
+print(f"Task Success: {result.success}")
+print(f"Agent Response: {result.final_response}")
+for trace in result.tool_traces:
+    print(f"Step {trace.step}: Called {trace.tool_name} -> {trace.result}")
+
+# 6. Save or export the modified workbook
+exported_path = manager.get_download_path()
+print(f"Exported to: {exported_path}")
+```
+
+---
+
+## 🚀 Quickstart & Local Setup
+
+### 1. Clone & Set Up Environment
 
 ```bash
 git clone https://github.com/SainBux-HadiSeelro/excel-ai-agent.git
 cd excel-ai-agent
+
+# Create virtual environment
 python -m venv .venv
 
 # On Windows PowerShell:
 .\.venv\Scripts\Activate.ps1
 
-# On Linux/macOS:
+# On Linux / macOS:
 source .venv/bin/activate
 ```
 
@@ -148,186 +280,109 @@ pip install -r requirements.txt
 pip install -r requirements-dev.txt
 ```
 
-### 3. Configure API Keys
-
-Copy the sample environment file and provide your API key:
+### 3. Configure API Credentials
 
 ```bash
 cp .env.example .env
 ```
 
-Edit `.env`:
+Edit `.env` with your preferred provider:
 ```env
-LLM_PROVIDER=gemini
+DEFAULT_LLM_PROVIDER=gemini
 GEMINI_API_KEY=your_gemini_api_key_here
 
-# Or for OpenAI / Anthropic:
-# OPENAI_API_KEY=your_openai_api_key
-# ANTHROPIC_API_KEY=your_anthropic_api_key
+# Optional: OpenAI / Anthropic
+# OPENAI_API_KEY=your_openai_key
+# ANTHROPIC_API_KEY=your_anthropic_key
 ```
 
-*(Note: If you don't have an API key right now, you can select **Offline Demo (Mock)** in the Streamlit UI or pass `--mock` in the CLI to test all functionality immediately!)*
+*(No API key? Select **Offline Demo (Mock)** in the UI to evaluate the agent instantly!)*
 
-### 4. Generate Sample Data
+### 4. Launch the Applications
 
-```bash
-python generate_sample_data.py
-```
-This generates `sample_data/sales.xlsx` with realistic sales rows, formulas, messy strings, and duplicate entries.
-
----
-
-## 🖥️ Running the Applications
-
-### 1. Streamlit Web UI
-
-> 🌐 **Live Cloud Demo**: You can run the application directly in your browser without local installation at **[excel-agent-ai.streamlit.app](https://excel-agent-ai.streamlit.app/)**.
-
-To run locally, launch the web interface:
-
+#### Option A: Streamlit Interactive Web Interface
 ```bash
 streamlit run app.py
 ```
 
-**UI Highlights**:
-- **Sidebar**: Upload `.xlsx` or `.csv`, select provider and model, enter API key, view undo step counter, and click **Download Updated File**.
-- **Interactive Chat**: Type your request in English or Roman Urdu. Watch live collapsible tool call traces showing arguments and execution results.
-- **Confirmation Prompts**: Automatic modal card warning before destructive operations (e.g. deleting rows, sheets, or duplicates).
-- **Sheet Preview Tab**: View active sheet data with pagination and metadata metrics.
-
-### 2. Terminal CLI Mode
-
-Run on any workbook:
-
+#### Option B: Terminal CLI REPL
 ```bash
 python cli.py sample_data/sales.xlsx
-```
 
-Or run in offline demo mode without an API key:
-
-```bash
+# Or run in offline evaluation mode:
 python cli.py --mock sample_data/sales.xlsx
 ```
 
-**Interactive CLI Commands**:
-- Type any plain language instruction (e.g., `total sales nikalo`)
-- `undo` : Revert the last change
-- `sheets` : List all sheets in the workbook
-- `exit` or `quit` : Exit the REPL
-
 ---
 
-## 💬 10 Example Prompts (English & Roman Urdu)
+## 🧪 Testing & Verification
 
-| # | Task | Language | Example Command |
-|---|---|---|---|
-| 1 | **Total Sales Calculation** | Roman Urdu | `total sales nikalo aur formula H25 mein likh do` |
-| 2 | **Deduplication** | Roman Urdu | `Order_ID ke hisaab se duplicates hata do` |
-| 3 | **Chart Creation** | Roman Urdu | `Targets sheet mein region ke hisaab se column chart banao` |
-| 4 | **Workbook Merging** | Roman Urdu | `sample_data/regional_extra.xlsx file ko is workbook mein merge karo` |
-| 5 | **Data Cleaning** | Roman Urdu | `Sales Rep column D ke extra spaces hatao aur text ko title case kardo` |
-| 6 | **Total Calculation** | English | `Calculate total units and total revenue using Excel SUM formulas at the bottom` |
-| 7 | **Pivot Table** | English | `Create a pivot summary grouped by Region showing the sum of Units` |
-| 8 | **Filter Data** | English | `Filter all rows where Region is 'North' and save them to a new sheet called 'North_Sales'` |
-| 9 | **Find and Replace** | English | `Find all occurrences of 'Laptop' and replace with 'Notebook'` |
-| 10 | **Formatting** | English | `Make header row A1:I1 bold, dark blue background, white text, and auto-fit column widths` |
-
----
-
-## 🧰 Available Tools Reference
-
-The agent includes 21 function-calling tools defined in `tools/registry.py`:
-
-1. **`list_sheets`**: Enumerates all worksheets, indices, row/column dimensions, and active sheet.
-2. **`read_range`**: Reads cell ranges with optional row limiting and formula preservation.
-3. **`get_sheet_summary`**: Scans sheet headers, inferred data types, null counts, and row counts (handles 50k+ rows via sampling).
-4. **`write_cells`**: Writes values and live Excel formulas with automatic post-write verification.
-5. **`find_and_replace`**: Replaces text or numeric matches across sheets or specified columns.
-6. **`clean_data`**: Strips whitespace, standardizes casing, and converts numbers/dates stored as text.
-7. **`create_sheet`**: Adds a new worksheet with duplicate name collision guards.
-8. **`delete_sheet`**: Deletes a sheet (*Destructive: requires user confirmation*).
-9. **`rename_sheet`**: Renames existing worksheets.
-10. **`insert_rows`**: Inserts one or more blank rows at a specific index.
-11. **`delete_rows`**: Deletes rows (*Destructive: requires user confirmation*).
-12. **`insert_columns`**: Inserts one or more blank columns at a specific index.
-13. **`delete_columns`**: Deletes columns (*Destructive: requires user confirmation*).
-14. **`remove_duplicates`**: Detects and purges duplicate rows based on subset columns (*Destructive: requires user confirmation*).
-15. **`sort_data`**: Sorts rows by one or more columns ascending or descending.
-16. **`filter_data`**: Filters rows by conditions (`equals`, `contains`, `greater_than`, `is_null`, etc.) and optionally writes to a new sheet.
-17. **`format_range`**: Sets font weights, colors, cell fills, borders, number formats (`$#,##0.00`, dates), and auto-fits columns.
-18. **`add_chart`**: Embeds native Excel Bar, Column, Line, or Pie charts.
-19. **`create_pivot_summary`**: Generates grouped pivot summaries using pandas and outputs a formatted table.
-20. **`merge_workbooks`**: Imports sheets or appends rows from external `.xlsx` and `.csv` files.
-21. **`undo_last_change`**: Rolls back the workbook to the prior version snapshot.
-
----
-
-## 🧪 Running the Test Suite
-
-Run the full pytest suite:
+The project is backed by a modular pytest suite covering tool schemas, formula evaluations, HTML escaping, undo states, and loop safety boundaries:
 
 ```bash
 pytest -v
 ```
 
-All 39 tests pass with 100% pass rate, verifying undo snapshots, confirmation binding, formula evaluation, HTML escaping, session cleanup, tool execution, and error self-correction:
 ```text
 ============================= test session starts =============================
-platform win32 -- Python 3.12.2, pytest-9.1.1, pluggy-1.6.0
-rootdir: excel-ai-agent
-collected 39 items
+platform win32 -- Python 3.12.2, pytest-9.1.1
+collected 54 items
 
-tests/test_agent_loop.py::test_agent_one_step_tool_call PASSED           [  2%]
-tests/test_agent_loop.py::test_agent_destructive_confirmation_pause PASSED [  5%]
-tests/test_agent_loop.py::test_agent_error_recovery PASSED               [  7%]
-tests/test_agent_loop.py::test_agent_destructive_confirm_execution PASSED [ 10%]
-tests/test_agent_loop.py::test_agent_destructive_cancel_makes_no_changes PASSED [ 12%]
-tests/test_agent_loop.py::test_agent_truncates_large_tool_output PASSED  [ 15%]
-tests/test_agent_loop.py::test_agent_history_cap_boundary PASSED         [ 17%]
-tests/test_agent_loop.py::test_agent_max_steps_custom_limit PASSED       [ 20%]
-tests/test_analysis.py::test_remove_duplicates_guard_and_execution PASSED [ 23%]
-tests/test_analysis.py::test_sort_data PASSED                            [ 25%]
-tests/test_analysis.py::test_filter_data_output_sheet PASSED             [ 28%]
-tests/test_analysis.py::test_create_pivot_summary PASSED                 [ 30%]
-tests/test_cleanup_and_uploads.py::test_cleanup_stale_sessions_older_than_24h PASSED [ 33%]
-tests/test_cleanup_and_uploads.py::test_cleanup_configurable_via_env PASSED [ 35%]
-tests/test_cleanup_and_uploads.py::test_upload_path_sanitization PASSED  [ 38%]
-tests/test_editing.py::test_write_cells_and_verify PASSED                [ 41%]
-tests/test_editing.py::test_find_and_replace PASSED                      [ 43%]
-tests/test_editing.py::test_clean_data_trim_and_casing PASSED            [ 46%]
-tests/test_editing.py::test_write_cells_with_sheet_prefix PASSED         [ 48%]
-tests/test_formatting_and_chart.py::test_format_range PASSED             [ 51%]
-tests/test_formatting_and_chart.py::test_add_chart_bar_and_pie PASSED    [ 53%]
-tests/test_formulas.py::test_evaluate_formulas_advanced PASSED           [ 56%]
-tests/test_formulas.py::test_evaluate_formula_read_range_integration PASSED [ 58%]
-tests/test_formulas.py::test_formula_evaluation_failure_never_crashes PASSED [ 61%]
-tests/test_inspection.py::test_list_sheets PASSED                        [ 64%]
-tests/test_inspection.py::test_read_range_with_formula PASSED            [ 66%]
-tests/test_inspection.py::test_read_range_all_and_limit PASSED           [ 69%]
-tests/test_inspection.py::test_get_sheet_summary PASSED                  [ 71%]
-tests/test_inspection.py::test_read_range_invalid_sheet PASSED           [ 74%]
-tests/test_structure.py::test_create_and_rename_sheet PASSED             [ 76%]
-tests/test_structure.py::test_delete_sheet_guard_and_confirmed PASSED    [ 79%]
-tests/test_structure.py::test_insert_and_delete_rows PASSED              [ 82%]
-tests/test_structure.py::test_insert_and_delete_columns PASSED           [ 84%]
-tests/test_ui_escaping.py::test_sheet_name_html_escaping PASSED          [ 87%]
-tests/test_ui_escaping.py::test_filename_html_escaping PASSED            [ 89%]
-tests/test_ui_escaping.py::test_destructive_warning_html_escaping PASSED [ 92%]
-tests/test_workbook_ops.py::test_merge_workbooks PASSED                  [ 94%]
-tests/test_workbook_ops.py::test_undo_last_change PASSED                 [ 97%]
-tests/test_workbook_ops.py::test_undo_multiple_mutations PASSED          [100%]
+tests/test_agent_loop.py ...........                                     [ 20%]
+tests/test_analysis.py ....                                              [ 27%]
+tests/test_cleanup_and_uploads.py ....                                   [ 35%]
+tests/test_editing.py ....                                               [ 42%]
+tests/test_formatting_and_chart.py ..                                    [ 46%]
+tests/test_formulas.py .................                                  [ 77%]
+tests/test_inspection.py .....                                           [ 87%]
+tests/test_structure.py ....                                             [ 94%]
+tests/test_ui_escaping.py ...                                            [100%]
 
-============================= 39 passed in 19.95s =============================
+============================== 54 passed ==============================
 ```
 
-Run end-to-end integration test:
-
+To run end-to-end integration verification:
 ```bash
 python verify_end_to_end.py
 ```
 
 ---
 
-## 📜 License
+## 📁 Repository Structure
 
-MIT License. Free for commercial and private use.
+```text
+excel-ai-agent/
+├── app.py                     # Streamlit Web App (Docked Chatbot, Spreadsheet Canvas, Traces)
+├── cli.py                     # Terminal REPL CLI interface (python cli.py file.xlsx)
+├── agent.py                   # Autonomous ReAct agent loop (15-step ceiling, context cap)
+├── llm.py                     # Provider abstraction (Gemini, OpenAI, Anthropic, Mock)
+├── workspace_manager.py       # Session sandbox, version snapshots, undo stack, formula engine
+├── generate_sample_data.py    # Sample dataset generator script (sales.xlsx)
+├── verify_end_to_end.py       # Full-cycle integration verification runner
+├── tools/
+│   ├── __init__.py
+│   ├── inspection.py          # list_sheets, read_range, get_sheet_summary
+│   ├── editing.py             # write_cells (formulas + verification), find_and_replace, clean_data
+│   ├── structure.py           # create_sheet, delete_sheet, rename_sheet, insert/delete rows & cols
+│   ├── analysis.py            # remove_duplicates, sort_data, filter_data, create_pivot_summary
+│   ├── formatting.py          # format_range (bold, colors, borders, number formats, auto-fit)
+│   ├── visualization.py       # add_chart (Bar, Column, Line, Pie)
+│   ├── workbook_ops.py        # merge_workbooks, undo_last_change
+│   └── registry.py            # Tool dispatcher & JSON function calling schemas (21 tools)
+├── tests/                     # 54 automated pytest unit and integration tests
+├── sample_data/               # Realistic test workbooks with formulas and messy text
+├── docs/                      # Screenshots & assets
+├── .github/workflows/ci.yml   # Multi-version GitHub Actions CI (Python 3.11 & 3.12)
+├── requirements.txt           # Production dependencies
+├── requirements-dev.txt       # Testing & development dependencies
+├── .env.example               # Provider configuration template
+├── SPEC.md                    # Canonical Technical & Functional Specification Document
+└── README.md                  # Project Documentation
+```
+
+---
+
+## 📜 License & Acknowledgments
+
+Distributed under the **MIT License**. Free for commercial and open-source use.  
+Built with Python, openpyxl, pandas, formulas, and Streamlit.

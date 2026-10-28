@@ -13,7 +13,7 @@
 
 ### 🌐 **[👉 Click Here to Open Live Demo (excel-agent-ai.streamlit.app)](https://excel-agent-ai.streamlit.app/)**
 
-[🎮 Live Web App](https://excel-agent-ai.streamlit.app/) • [🌟 Features](#-key-features) • [📸 Screenshots](#-screenshots) • [💬 Example Prompts](#-10-example-prompts-english--roman-urdu) • [🚀 Quick Start](#-quickstart--setup) • [🧰 Tools Reference](#-available-tools-reference)
+[🎮 Live Web App](https://excel-agent-ai.streamlit.app/) • [📋 Technical Specification](SPEC.md) • [🌟 Features](#-key-features) • [📸 Screenshots](#-screenshots) • [💬 Example Prompts](#-10-example-prompts-english--roman-urdu) • [🚀 Quick Start](#-quickstart--setup) • [🧰 Tools Reference](#-available-tools-reference)
 
 ---
 
@@ -108,6 +108,7 @@ excel-ai-agent/
 ├── requirements.txt           # Runtime dependencies
 ├── requirements-dev.txt       # Development & test dependencies
 ├── .env.example
+├── SPEC.md                    # Technical & Functional Specification Document
 └── README.md
 ```
 

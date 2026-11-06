@@ -825,56 +825,13 @@ if chat_view_mode == "Corner Floating Chatbot (Recommended)":
 
     else:
         st.markdown("""
-        <div class="welcome-container">
-            <h3 style="margin-top:0; color:#0F172A; font-weight:800; font-size:1.4rem;">
-                👋 Welcome to Excel AI Workspace
+        <div class="welcome-container" style="text-align: center; padding: 2.2rem 1.5rem;">
+            <h3 style="margin-top:0; color:#0F172A; font-weight:800; font-size:1.5rem;">
+                📊 Excel AI Copilot
             </h3>
-            <p style="color:#64748B; font-size:0.98rem; line-height:1.5; margin-bottom:1.2rem;">
-                Apni spreadsheet upload karein ya sample data load karein. Aap simple <b>Roman Urdu</b> ya <b>English</b> mein likhein, AI khud Excel ke formulas, charts aur data cleaning karega!
+            <p style="color:#64748B; font-size:1rem; line-height:1.5; margin-bottom:0.5rem; max-width:650px; margin-left:auto; margin-right:auto;">
+                Apni Excel file upload karein ya sample data load karke start karein. AI aapke liye formulas, charts aur data cleaning khud karega!
             </p>
-            
-            <div style="background: linear-gradient(135deg, #F0FDF4 0%, #EFF6FF 100%); border: 1.5px solid #86EFAC; border-radius: 14px; padding: 18px 20px; margin-bottom: 1.5rem;">
-                <div style="font-weight: 800; font-size: 1.05rem; color: #166534; margin-bottom: 10px;">
-                    👶 Non-Tech Users Guide — Sirf 3 Aasan Qadam:
-                </div>
-                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px; font-size: 0.88rem; color: #1E293B;">
-                    <div style="background: white; padding: 12px 14px; border-radius: 10px; border: 1px solid #CBD5E1; box-shadow: 0 2px 4px rgba(0,0,0,0.03);">
-                        <div style="font-weight:700; color:#0F172A; margin-bottom:4px;">1️⃣ File Upload Karein</div>
-                        Sidebar se apni <b>.xlsx / .csv</b> file upload karein ya niche <b>"📁 Load Sample Data"</b> dabayein.
-                    </div>
-                    <div style="background: white; padding: 12px 14px; border-radius: 10px; border: 1px solid #CBD5E1; box-shadow: 0 2px 4px rgba(0,0,0,0.03);">
-                        <div style="font-weight:700; color:#0F172A; margin-bottom:4px;">2️⃣ Command Dein ya Click Karein</div>
-                        Chatbot mein simple baat likhein (jaise <i>"Total sales nikalo"</i>) ya Quick Action buttons use karein.
-                    </div>
-                    <div style="background: white; padding: 12px 14px; border-radius: 10px; border: 1px solid #CBD5E1; box-shadow: 0 2px 4px rgba(0,0,0,0.03);">
-                        <div style="font-weight:700; color:#0F172A; margin-bottom:4px;">3️⃣ Tayyar File Download Karein</div>
-                        Kaam complete hone ke baad <b>"💾 Export XLSX"</b> button dabayein aur updated file save kar lein!
-                    </div>
-                </div>
-            </div>
-
-            <div class="bento-grid">
-                <div class="bento-card">
-                    <span class="bento-icon">🧮</span>
-                    <div class="bento-title">Dynamic Formula Synthesis</div>
-                    <div class="bento-desc">Static numbers ki bajaye live Excel formulas (<code>=SUM</code>, <code>=IF</code>, <code>=AVERAGE</code>) generate karta hai.</div>
-                </div>
-                <div class="bento-card">
-                    <span class="bento-icon">🛡️</span>
-                    <div class="bento-title">Safe Reversible Sandbox</div>
-                    <div class="bento-desc">Aapki asal file safe rehti hai; har modification se pehle automatic snapshot create hota hai.</div>
-                </div>
-                <div class="bento-card">
-                    <span class="bento-icon">🧹</span>
-                    <div class="bento-title">Intelligent Data Cleaning</div>
-                    <div class="bento-desc">Extra spaces trim karna, text casing theek karna, aur duplicate rows ko purge karna.</div>
-                </div>
-                <div class="bento-card">
-                    <span class="bento-icon">📈</span>
-                    <div class="bento-title">OpenXML Native Visualizations</div>
-                    <div class="bento-desc">Worksheets mein direct Bar, Column, Line aur Pie charts embed karta hai.</div>
-                </div>
-            </div>
         </div>
         """, unsafe_allow_html=True)
 

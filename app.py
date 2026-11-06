@@ -462,7 +462,7 @@ if "current_file_name" not in st.session_state:
 if "pending_confirmation" not in st.session_state:
     st.session_state.pending_confirmation = None
 if "chat_open" not in st.session_state:
-    st.session_state.chat_open = True
+    st.session_state.chat_open = False
 
 # Sidebar Configuration
 with st.sidebar:

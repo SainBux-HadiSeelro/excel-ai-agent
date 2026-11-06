@@ -625,6 +625,52 @@ class MockProvider(BaseLLMProvider):
                     tool_calls=[]
                 )
 
+        # A. Greetings & Pleasantries
+        if any(w in last_user_msg for w in ["salam", "assalam", "hello", "hi", "hey", "kaise ho", "kese ho", "kya haal", "good morning", "good evening", "adaab"]):
+            is_urdu = any(w in last_user_msg for w in ["salam", "assalam", "kaise", "kese", "haal", "adaab", "sunao"])
+            reply = (
+                "Walaikum Assalam! Main theek hoon, aap sunayein? Main aapka Excel AI Copilot hoon. "
+                "Main aapki spreadsheet par live formulas lagane, duplicate rows hatane, charts banane aur messy data clean karne mein madad kar sakta hoon. "
+                "Aaj main aapki kya madad karoon?"
+                if is_urdu
+                else "Hello! I am your Excel AI Copilot. I can help you synthesize formulas, remove duplicate rows, create charts, and clean messy data in your spreadsheet. How can I help you today?"
+            )
+            return LLMResponse(content=reply, tool_calls=[])
+
+        # B. Help & Capabilities Guidance
+        if any(w in last_user_msg for w in ["kya kar sakte", "help", "madad", "guide", "options", "features", "kaise use", "kya kaam", "samjhao", "batao"]):
+            is_urdu = any(w in last_user_msg for w in ["kya", "madad", "kaise", "samjhao", "batao"])
+            reply = (
+                "Main aapki spreadsheet ke liye yeh kaam ba-asani kar sakta hoon:\n\n"
+                "1. 📊 **Formulas & Totals:** Jaise *'Total sales nikalo'* ya average calculate karna.\n"
+                "2. 🧹 **Duplicate Cleaning:** Jaise *'Order_ID ke hisaab se duplicates hata do'*.\n"
+                "3. 📈 **Charts & Graphs:** Jaise *'Region ke hisaab se column chart banao'*.\n"
+                "4. ✨ **Data Cleaning:** Jaise *'Names ke extra spaces trim karke format theek karo'*.\n"
+                "5. 📁 **Workbooks Merge:** Jaise *'Do Excel files ka data merge kardo'*.\n\n"
+                "Aap mujhse Roman Urdu ya English mein simple baat likhein ya screen par mojood 1-Click buttons use karein!"
+                if is_urdu
+                else (
+                    "Here is what I can do for your spreadsheet:\n\n"
+                    "1. 📊 **Dynamic Formulas:** Calculate totals, averages, or IF logic directly.\n"
+                    "2. 🧹 **Duplicate Removal:** Find and safely remove duplicate rows.\n"
+                    "3. 📈 **Native Charts:** Generate Column, Bar, Line, or Pie charts.\n"
+                    "4. ✨ **Data Formatting:** Trim whitespace, fix capitalization, and format columns.\n"
+                    "5. 📁 **Merge Workbooks:** Combine sheets from different Excel workbooks.\n\n"
+                    "Simply tell me what you need in plain English or Roman Urdu, or use the 1-Click buttons!"
+                )
+            )
+            return LLMResponse(content=reply, tool_calls=[])
+
+        # C. Thanks & Acknowledgements
+        if any(w in last_user_msg for w in ["shukriya", "thanks", "thank you", "great", "nice", "zabardast", "shukriyaa", "bohot acha", "bohat acha"]):
+            is_urdu = any(w in last_user_msg for w in ["shukriya", "acha", "zabardast"])
+            reply = (
+                "Aapka bohat shukriya! Agar aapko mazeed kisi formula, chart ya calculation ki zaroorat ho toh zaroor batayein, main hazir hoon."
+                if is_urdu
+                else "You're very welcome! If you need any more calculations, charts, or data adjustments, just let me know!"
+            )
+            return LLMResponse(content=reply, tool_calls=[])
+
         # 1. Total sales / calculations
         if any(w in last_user_msg for w in ["total", "sum", "sales nikalo", "calculate", "jama"]):
             if not last_tool_res:
@@ -759,11 +805,33 @@ class MockProvider(BaseLLMProvider):
         # Default fallback
         if not last_tool_res:
             return LLMResponse(
-                content="Workbook inspect ki ja rahi hai.",
+                content="Aapki workbook structure inspect ki ja rahi hai.",
                 tool_calls=[ToolCall(id=str(uuid.uuid4()), name="list_sheets", arguments={})]
             )
         else:
-            return LLMResponse(content="Task mukammal ho gaya hai. Sheets check kar sakte hain.", tool_calls=[])
+            sheets_list = last_tool_res.get("sheets", ["Sales"])
+            sheets_str = ", ".join(f"`{s}`" for s in sheets_list)
+            is_urdu = any(w in last_user_msg for w in ["karo", "batao", "hai", "kya", "kaise", "nikalo", "mujhe", "chahiye"])
+            msg = (
+                f"Aapki workbook active hai jisme sheets: {sheets_str} mojood hain.\n\n"
+                "Main aapke liye kya karoon? Jaise:\n"
+                "- 📊 *'Total sales calculate karo'*\n"
+                "- 🧹 *'Duplicate rows delete kardo'*\n"
+                "- 📈 *'Sales ka column chart banao'*\n"
+                "- ✨ *'Data clean aur format kardo'*\n\n"
+                "Bataiye main kis column ya sheet par kaam shuru karoon?"
+                if is_urdu
+                else (
+                    f"Your workbook is active with sheet(s): {sheets_str}.\n\n"
+                    "Here are a few things I can do for you right now:\n"
+                    "- 📊 *Calculate totals or averages with live formulas*\n"
+                    "- 🧹 *Remove duplicate records safely*\n"
+                    "- 📈 *Generate charts and visualizations*\n"
+                    "- ✨ *Clean text, trim whitespace, and standardize casing*\n\n"
+                    "Please let me know how you'd like to proceed!"
+                )
+            )
+            return LLMResponse(content=msg, tool_calls=[])
 
 
 def get_llm_provider(

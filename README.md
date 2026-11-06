@@ -15,11 +15,37 @@
 
 ### 🌐 **[👉 Open Live Interactive Web App (excel-agent-ai.streamlit.app)](https://excel-agent-ai.streamlit.app/)**
 
-[🎮 Live Web App](https://excel-agent-ai.streamlit.app/) • [📋 System Architecture & SPEC](SPEC.md) • [🧠 The Agentic Paradigm](#-the-agentic-paradigm) • [🌟 Core Capabilities](#-core-autonomous-capabilities) • [🏗️ System Architecture](#%EF%B8%8F-agentic-system-architecture) • [💬 Prompts Showcase](#-multilingual-prompt-showcase) • [🧰 Tools Registry](#-21-autonomous-tools-registry) • [🐍 Python SDK Usage](#-programmatic-agent-sdk-usage) • [🚀 Quickstart](#-quickstart--local-setup) • [🧪 Testing](#-testing--verification)
+[🎮 Live Web App](https://excel-agent-ai.streamlit.app/) • [👶 Non-Tech Quickstart (1-Click)](#-non-tech-quickstart-asaan-tareeqa--1-click) • [📋 System Architecture & SPEC](SPEC.md) • [🧠 The Agentic Paradigm](#-the-agentic-paradigm) • [🌟 Core Capabilities](#-core-autonomous-capabilities) • [🏗️ System Architecture](#%EF%B8%8F-agentic-system-architecture) • [💬 Prompts Showcase](#-multilingual-prompt-showcase) • [🧰 Tools Registry](#-21-autonomous-tools-registry) • [🐍 Python SDK Usage](#-programmatic-agent-sdk-usage) • [🚀 Developer Quickstart](#-quickstart--local-setup) • [🧪 Testing](#-testing--verification)
 
 ---
 
 </div>
+
+## 👶 Non-Tech Quickstart (Asaan Tareeqa / 1-Click Run)
+
+Agar aap non-technical hain aur terminal ya coding ke baghair direct kaam karna chahte hain, toh sirf yeh simple steps follow karein:
+
+### 1️⃣ Run Karein (Sirf Ek Click!)
+Folder mein mojood **`Run_App.bat`** file par double-click karein:
+- Python aur packages automatically check honge.
+- Web browser mein Excel AI Copilot automatically open ho jayega!
+
+### 2️⃣ Kaam Karein (No Coding Required)
+- **File Upload:** Apni Excel (`.xlsx` ya `.csv`) file upload karein ya **"📁 Load Sample Data"** dabayein.
+- **AI se baat karein:** Chatbot mein Roman Urdu ya English mein simple baat likhein, jaise:
+  - *"Total sales nikalo aur formula likho"*
+  - *"Duplicate rows delete kardo"*
+  - *"Region ke hisaab se sales ka chart banao"*
+  - *"Sales Rep column ke extra spaces hatao aur format saaf kardo"*
+- **Ya 1-Click Buttons:** Main screen par mojood **⚡ 1-Click Asaan Actions** buttons dabayein!
+
+### 3️⃣ Updated File Download Karein
+- Kaam hone ke baad **"💾 Export XLSX"** button par click karein aur updated file save karein.
+- Agar koi ghalti ho jaye toh **"↩️ Undo"** button dabakar foran wapis pehli haalat mein le jayein!
+
+> 💡 **Free Demo Mode:** Agar aapke paas API key nahi hai, toh koi fikar nahi! Sidebar mein **"Offline Demo (Mock)"** select karein aur bilkul free bina kisi API key ke test karein.
+
+---
 
 ## 💡 The Agentic Paradigm
 
@@ -300,12 +326,18 @@ GEMINI_API_KEY=your_gemini_api_key_here
 
 ### 4. Launch the Applications
 
-#### Option A: Streamlit Interactive Web Interface
+#### Option A: 1-Click Launcher (Windows / Non-Tech)
+Double-click `Run_App.bat` in the root folder, or in terminal:
+```cmd
+Run_App.bat
+```
+
+#### Option B: Streamlit Web Interface (Manual)
 ```bash
 streamlit run app.py
 ```
 
-#### Option B: Terminal CLI REPL
+#### Option C: Terminal CLI REPL
 ```bash
 python cli.py sample_data/sales.xlsx
 

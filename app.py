@@ -462,7 +462,7 @@ if "current_file_name" not in st.session_state:
 if "pending_confirmation" not in st.session_state:
     st.session_state.pending_confirmation = None
 if "chat_open" not in st.session_state:
-    st.session_state.chat_open = False
+    st.session_state.chat_open = True
 
 # Sidebar Configuration
 with st.sidebar:
@@ -508,8 +508,12 @@ with st.sidebar:
         help="Reads automatically from .env if set. For Offline Demo, leave as default."
     )
 
-    if "Offline" not in provider_choice and not api_key_input:
-        st.info("💡 **No API key?** Switch Provider to **'Offline Demo (Mock)'** above to test instantly without an API key.")
+    if "Offline" in provider_choice:
+        st.success("🟢 **Free Demo Mode** (Kisi API key ki zaroorat nahi)")
+    elif api_key_input:
+        st.success(f"🟢 **{provider_choice} Ready**")
+    else:
+        st.info("💡 **Free Demo Mode:** Switch Provider to **'Offline Demo (Mock)'** above to test free without an API key.")
 
     st.markdown("---")
     st.markdown("#### 2. 📂 Workbook Sandbox")
@@ -765,6 +769,26 @@ if chat_view_mode == "Corner Floating Chatbot (Recommended)":
                 st.session_state.chat_open = not st.session_state.chat_open
                 st.rerun()
 
+        st.markdown("<div style='margin: 10px 0 6px 0; font-weight:700; color:#334155; font-size:0.88rem;'>⚡ 1-Click Asaan Actions (Click karein aur Copilot khud kaam karega):</div>", unsafe_allow_html=True)
+        col_qa1, col_qa2, col_qa3, col_qa4 = st.columns(4)
+        main_qa_clicked = None
+        with col_qa1:
+            if st.button("📊 Total Sales Nikalo", key="main_qa_total", use_container_width=True, help="Sales column ka total formula ke sath nikalein"):
+                main_qa_clicked = "total sales nikalo aur formula likh do"
+        with col_qa2:
+            if st.button("🧹 Duplicates Hatao", key="main_qa_dups", use_container_width=True, help="Duplicate rows saaf karein"):
+                main_qa_clicked = "Order_ID ke hisaab se duplicates hata do"
+        with col_qa3:
+            if st.button("📈 Sales Chart Banao", key="main_qa_chart", use_container_width=True, help="Native Excel column chart banayein"):
+                main_qa_clicked = "Targets sheet mein region ke hisaab se column chart banao"
+        with col_qa4:
+            if st.button("✨ Data Format & Clean", key="main_qa_clean", use_container_width=True, help="Extra spaces aur formatting clean karein"):
+                main_qa_clicked = "Sales Rep column D ke extra spaces hatao aur title case kardo"
+
+        if main_qa_clicked:
+            st.session_state.chat_open = True
+            run_agent_task(main_qa_clicked)
+
         try:
             curr_path = st.session_state.manager.get_current_file_path()
             curr_stat = Path(curr_path).stat()
@@ -803,11 +827,32 @@ if chat_view_mode == "Corner Floating Chatbot (Recommended)":
         st.markdown("""
         <div class="welcome-container">
             <h3 style="margin-top:0; color:#0F172A; font-weight:800; font-size:1.4rem;">
-                👋 Welcome to the Autonomous Excel AI Workspace
+                👋 Welcome to Excel AI Workspace
             </h3>
-            <p style="color:#64748B; font-size:0.98rem; line-height:1.5; margin-bottom:1rem;">
-                Apni spreadsheet upload karein ya sample data load karein. Hamara autonomous agent aapki <b>Roman Urdu</b> ya <b>English</b> instructions ko deterministic OpenXML operations mein tabdeel karega!
+            <p style="color:#64748B; font-size:0.98rem; line-height:1.5; margin-bottom:1.2rem;">
+                Apni spreadsheet upload karein ya sample data load karein. Aap simple <b>Roman Urdu</b> ya <b>English</b> mein likhein, AI khud Excel ke formulas, charts aur data cleaning karega!
             </p>
+            
+            <div style="background: linear-gradient(135deg, #F0FDF4 0%, #EFF6FF 100%); border: 1.5px solid #86EFAC; border-radius: 14px; padding: 18px 20px; margin-bottom: 1.5rem;">
+                <div style="font-weight: 800; font-size: 1.05rem; color: #166534; margin-bottom: 10px;">
+                    👶 Non-Tech Users Guide — Sirf 3 Aasan Qadam:
+                </div>
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px; font-size: 0.88rem; color: #1E293B;">
+                    <div style="background: white; padding: 12px 14px; border-radius: 10px; border: 1px solid #CBD5E1; box-shadow: 0 2px 4px rgba(0,0,0,0.03);">
+                        <div style="font-weight:700; color:#0F172A; margin-bottom:4px;">1️⃣ File Upload Karein</div>
+                        Sidebar se apni <b>.xlsx / .csv</b> file upload karein ya niche <b>"📁 Load Sample Data"</b> dabayein.
+                    </div>
+                    <div style="background: white; padding: 12px 14px; border-radius: 10px; border: 1px solid #CBD5E1; box-shadow: 0 2px 4px rgba(0,0,0,0.03);">
+                        <div style="font-weight:700; color:#0F172A; margin-bottom:4px;">2️⃣ Command Dein ya Click Karein</div>
+                        Chatbot mein simple baat likhein (jaise <i>"Total sales nikalo"</i>) ya Quick Action buttons use karein.
+                    </div>
+                    <div style="background: white; padding: 12px 14px; border-radius: 10px; border: 1px solid #CBD5E1; box-shadow: 0 2px 4px rgba(0,0,0,0.03);">
+                        <div style="font-weight:700; color:#0F172A; margin-bottom:4px;">3️⃣ Tayyar File Download Karein</div>
+                        Kaam complete hone ke baad <b>"💾 Export XLSX"</b> button dabayein aur updated file save kar lein!
+                    </div>
+                </div>
+            </div>
+
             <div class="bento-grid">
                 <div class="bento-card">
                     <span class="bento-icon">🧮</span>

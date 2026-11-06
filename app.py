@@ -952,11 +952,6 @@ if chat_view_mode == "Corner Floating Chatbot (Recommended)":
                 for msg in st.session_state.messages:
                     with st.chat_message(msg["role"]):
                         st.markdown(msg["content"])
-                        if "traces" in msg and msg["traces"]:
-                            with st.expander(f"🛠️ Agent Execution Traces ({len(msg['traces'])})"):
-                                for t in msg["traces"]:
-                                    st.markdown(f"**Step {t.step}: `{t.tool_name}`**")
-                                    st.json({"arguments": t.arguments, "result": t.result})
 
                 # Destructive confirmation inside corner chat
                 if st.session_state.pending_confirmation:
@@ -1096,11 +1091,6 @@ else:
         for msg in st.session_state.messages:
             with st.chat_message(msg["role"]):
                 st.markdown(msg["content"])
-                if "traces" in msg and msg["traces"]:
-                    with st.expander(f"🛠️ Agent Execution Traces ({len(msg['traces'])} action(s))"):
-                        for t in msg["traces"]:
-                            st.markdown(f"**Step {t.step}: `{t.tool_name}`**")
-                            st.json({"arguments": t.arguments, "result": t.result})
 
         if st.session_state.pending_confirmation:
             conf = st.session_state.pending_confirmation

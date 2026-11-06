@@ -28,6 +28,29 @@ from agent import ExcelAgent, ToolExecutionTrace, SYSTEM_PROMPT
 load_dotenv()
 
 
+def get_secret_or_env(key_name: str, default: str = "") -> str:
+    """Reads a configuration key from os.environ or st.secrets (Streamlit Cloud)."""
+    val = os.getenv(key_name, "")
+    if not val:
+        try:
+            if hasattr(st, "secrets") and key_name in st.secrets:
+                val = str(st.secrets[key_name])
+        except Exception:
+            pass
+    return str(val or default).strip()
+
+
+def resolve_provider_key(provider: str) -> str:
+    """Resolves default API key for the selected provider from environment or Streamlit Secrets."""
+    if "Offline" in provider:
+        return "mock-key"
+    prefix = provider.upper().split()[0]
+    key = get_secret_or_env(f"{prefix}_API_KEY")
+    if provider == "Gemini" and not key:
+        key = get_secret_or_env("GOOGLE_API_KEY")
+    return key
+
+
 def load_sample_workbook() -> None:
     """Loads the sample_data/sales.xlsx dataset into the active session workspace."""
     sample_path = Path("sample_data/sales.xlsx")
@@ -470,15 +493,22 @@ with st.sidebar:
     st.caption("Autonomous Agentic Copilot • English & Roman Urdu")
 
     st.markdown("#### 1. 🤖 Intelligence Engine")
-    has_any_key = any(
-        os.getenv(k) for k in ["GEMINI_API_KEY", "GOOGLE_API_KEY", "OPENAI_API_KEY", "ANTHROPIC_API_KEY"]
-    )
-    env_provider = os.getenv("LLM_PROVIDER", "").lower()
+    has_gemini = bool(get_secret_or_env("GEMINI_API_KEY") or get_secret_or_env("GOOGLE_API_KEY"))
+    has_openai = bool(get_secret_or_env("OPENAI_API_KEY"))
+    has_anthropic = bool(get_secret_or_env("ANTHROPIC_API_KEY"))
+
+    env_provider = get_secret_or_env("LLM_PROVIDER", "").lower()
     provider_map = {"gemini": 0, "openai": 1, "anthropic": 2, "claude": 2, "mock": 3}
     if env_provider in provider_map:
         default_provider_idx = provider_map[env_provider]
+    elif has_gemini:
+        default_provider_idx = 0
+    elif has_openai:
+        default_provider_idx = 1
+    elif has_anthropic:
+        default_provider_idx = 2
     else:
-        default_provider_idx = 0 if has_any_key else 3
+        default_provider_idx = 3
 
     provider_choice = st.selectbox(
         "Provider",
@@ -486,34 +516,37 @@ with st.sidebar:
         index=default_provider_idx
     )
 
-    default_models = {
-        "Gemini": DEFAULT_GEMINI_MODEL,
-        "OpenAI": "gpt-6-luna",
-        "Anthropic": "claude-haiku-5-5",
-        "Offline Demo (Mock)": "mock-model"
-    }
-
-    model_choice = st.text_input(
-        "Model Name",
-        value=os.getenv(f"{provider_choice.upper().split()[0]}_MODEL", default_models.get(provider_choice, "default"))
-    )
-
-    env_key = os.getenv(f"{provider_choice.upper().split()[0]}_API_KEY", "")
-    if provider_choice == "Gemini" and not env_key:
-        env_key = os.getenv("GOOGLE_API_KEY", "")
-    api_key_input = st.text_input(
-        f"{provider_choice} API Key",
-        value=env_key if "Offline" not in provider_choice else "mock-key",
-        type="password",
-        help="Reads automatically from .env if set. For Offline Demo, leave as default."
-    )
+    auto_key = resolve_provider_key(provider_choice)
 
     if "Offline" in provider_choice:
-        st.success("🟢 **Free Demo Mode** (Kisi API key ki zaroorat nahi)")
-    elif api_key_input:
-        st.success(f"🟢 **{provider_choice} Ready**")
+        st.success("🟢 **Free Offline Engine** (No key required)")
+    elif auto_key:
+        st.success(f"🟢 **{provider_choice} Ready** (Auto-connected)")
     else:
-        st.info("💡 **Free Demo Mode:** Switch Provider to **'Offline Demo (Mock)'** above to test free without an API key.")
+        st.info("💡 **Free Mode Active:** Offline demo engine will be used.")
+
+    # Collapsible advanced settings so visitors don't have to deal with API keys
+    with st.expander("⚙️ Advanced: Custom Model & Key (Optional)"):
+        default_models = {
+            "Gemini": DEFAULT_GEMINI_MODEL,
+            "OpenAI": "gpt-6-luna",
+            "Anthropic": "claude-haiku-5-5",
+            "Offline Demo (Mock)": "mock-model"
+        }
+
+        model_choice = st.text_input(
+            "Model Name",
+            value=get_secret_or_env(f"{provider_choice.upper().split()[0]}_MODEL", default_models.get(provider_choice, "default"))
+        )
+
+        custom_key_input = st.text_input(
+            f"Custom {provider_choice} API Key",
+            value="",
+            type="password",
+            help="Leave empty to use automatic server key or free offline mode."
+        )
+
+    api_key_input = custom_key_input.strip() if custom_key_input.strip() else auto_key
 
     st.markdown("---")
     st.markdown("#### 2. 📂 Workbook Sandbox")
@@ -596,7 +629,14 @@ with st.sidebar:
                 if is_model_error(err_str):
                     st.sidebar.error(f"Provider Error: {err_str}\n\n💡 **Tip:** Model not found or retired. Please update the **Model Name** field above.")
                 else:
-                    st.sidebar.error(f"Provider Error: {err_str}")
+                    # Fallback gracefully to MockProvider on key or network error
+                    from llm import MockProvider
+                    st.session_state.agent = ExcelAgent(manager=st.session_state.manager, provider=MockProvider())
+                    st.session_state.agent_config = current_config
+        else:
+            from llm import MockProvider
+            st.session_state.agent = ExcelAgent(manager=st.session_state.manager, provider=MockProvider())
+            st.session_state.agent_config = current_config
 
     st.markdown("---")
     # Status & Undo Controls

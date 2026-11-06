@@ -21,6 +21,19 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
+
+def _resolve_secret(key_name: str, default: str = "") -> str:
+    """Reads a configuration key from os.environ or st.secrets (Streamlit Cloud)."""
+    val = os.getenv(key_name, "")
+    if not val:
+        try:
+            import streamlit as _st
+            if hasattr(_st, "secrets") and key_name in _st.secrets:
+                val = str(_st.secrets[key_name])
+        except Exception:
+            pass
+    return str(val or default).strip()
+
 # Single source of truth for the default Gemini model.
 # Override with the GEMINI_MODEL environment variable if needed.
 DEFAULT_GEMINI_MODEL = os.getenv("GEMINI_MODEL", "gemini-3.8-flash")
@@ -117,8 +130,8 @@ class OpenAIProvider(BaseLLMProvider):
     """OpenAI API provider."""
 
     def __init__(self, api_key: Optional[str] = None, model: Optional[str] = None):
-        key = api_key or os.getenv("OPENAI_API_KEY", "")
-        m = model or os.getenv("OPENAI_MODEL", "gpt-6-luna")
+        key = api_key or _resolve_secret("OPENAI_API_KEY")
+        m = model or _resolve_secret("OPENAI_MODEL", "gpt-6-luna")
         super().__init__(api_key=key, model=m)
         if not self.api_key:
             raise ValueError("OpenAI API key not found. Set OPENAI_API_KEY in .env or pass api_key.")
@@ -212,8 +225,8 @@ class AnthropicProvider(BaseLLMProvider):
     """Anthropic Claude API provider."""
 
     def __init__(self, api_key: Optional[str] = None, model: Optional[str] = None):
-        key = api_key or os.getenv("ANTHROPIC_API_KEY", "")
-        m = model or os.getenv("ANTHROPIC_MODEL", "claude-haiku-5-5")
+        key = api_key or _resolve_secret("ANTHROPIC_API_KEY")
+        m = model or _resolve_secret("ANTHROPIC_MODEL", "claude-haiku-5-5")
         super().__init__(api_key=key, model=m)
         if not self.api_key:
             raise ValueError("Anthropic API key not found. Set ANTHROPIC_API_KEY in .env or pass api_key.")
@@ -372,8 +385,8 @@ class GeminiProvider(BaseLLMProvider):
     """Google Gemini API provider (supports official google-genai and direct REST)."""
 
     def __init__(self, api_key: Optional[str] = None, model: Optional[str] = None):
-        key = api_key or os.getenv("GEMINI_API_KEY", "") or os.getenv("GOOGLE_API_KEY", "")
-        m = model or os.getenv("GEMINI_MODEL", DEFAULT_GEMINI_MODEL)
+        key = api_key or _resolve_secret("GEMINI_API_KEY") or _resolve_secret("GOOGLE_API_KEY")
+        m = model or _resolve_secret("GEMINI_MODEL", DEFAULT_GEMINI_MODEL)
         super().__init__(api_key=key, model=m)
         if not self.api_key:
             raise ValueError("Gemini API key not found. Set GEMINI_API_KEY in .env or pass api_key.")
@@ -763,20 +776,20 @@ def get_llm_provider(
     Checks explicit provider_name -> environment variables -> fallback.
     """
     load_dotenv()
-    target_provider = (provider_name or os.getenv("LLM_PROVIDER", "")).lower().strip()
+    target_provider = (provider_name or _resolve_secret("LLM_PROVIDER", "")).lower().strip()
 
     if not target_provider:
         # Auto-detect from available keys
         if api_key:
             target_provider = "gemini"
-        elif os.getenv("GEMINI_API_KEY") or os.getenv("GOOGLE_API_KEY"):
+        elif _resolve_secret("GEMINI_API_KEY") or _resolve_secret("GOOGLE_API_KEY"):
             target_provider = "gemini"
-        elif os.getenv("OPENAI_API_KEY"):
+        elif _resolve_secret("OPENAI_API_KEY"):
             target_provider = "openai"
-        elif os.getenv("ANTHROPIC_API_KEY"):
+        elif _resolve_secret("ANTHROPIC_API_KEY"):
             target_provider = "anthropic"
         else:
-            target_provider = "gemini"
+            target_provider = "mock"
 
     if target_provider == "gemini":
         return GeminiProvider(api_key=api_key, model=model)

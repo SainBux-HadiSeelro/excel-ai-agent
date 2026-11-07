@@ -518,33 +518,46 @@ with st.sidebar:
 
     auto_key = resolve_provider_key(provider_choice)
 
-    if "Offline" in provider_choice:
-        st.success("🟢 **Free Offline Engine** (No key required)")
-    elif auto_key:
-        st.success(f"🟢 **{provider_choice} Ready** (Auto-connected)")
+    # Status & key handling
+    if auto_key and "Offline" not in provider_choice:
+        st.success(f"🟢 **Real AI Active:** {provider_choice} (Intelligent Mode)")
+        custom_key_input = ""
+        with st.expander("⚙️ Advanced Settings (Optional)"):
+            default_models = {
+                "Gemini": DEFAULT_GEMINI_MODEL,
+                "OpenAI": "gpt-6-luna",
+                "Anthropic": "claude-haiku-5-5",
+                "Offline Demo (Mock)": "mock-model"
+            }
+            model_choice = st.text_input(
+                "Model Name",
+                value=get_secret_or_env(f"{provider_choice.upper().split()[0]}_MODEL", default_models.get(provider_choice, "default"))
+            )
+            custom_key_input = st.text_input(
+                f"Override {provider_choice} Key",
+                value="",
+                type="password",
+                help="Leave empty to use automatic pre-configured key."
+            )
+    elif "Offline" in provider_choice:
+        st.info("🟠 **Offline Demo Engine** (Simulated custom responses)")
+        model_choice = "mock-model"
+        custom_key_input = ""
     else:
-        st.info("💡 **Free Mode Active:** Offline demo engine will be used.")
-
-    # Collapsible advanced settings so visitors don't have to deal with API keys
-    with st.expander("⚙️ Advanced: Custom Model & Key (Optional)"):
+        st.warning(f"⚠️ **Real AI Key Required:** Enter your {provider_choice} API key below to activate Intelligent AI:")
+        custom_key_input = st.text_input(
+            f"{provider_choice} API Key",
+            value="",
+            type="password",
+            placeholder="Paste your API key here to activate Real AI...",
+            help="To make this automatic for all visitors, add GEMINI_API_KEY to Streamlit Cloud Secrets."
+        )
         default_models = {
             "Gemini": DEFAULT_GEMINI_MODEL,
             "OpenAI": "gpt-6-luna",
-            "Anthropic": "claude-haiku-5-5",
-            "Offline Demo (Mock)": "mock-model"
+            "Anthropic": "claude-haiku-5-5"
         }
-
-        model_choice = st.text_input(
-            "Model Name",
-            value=get_secret_or_env(f"{provider_choice.upper().split()[0]}_MODEL", default_models.get(provider_choice, "default"))
-        )
-
-        custom_key_input = st.text_input(
-            f"Custom {provider_choice} API Key",
-            value="",
-            type="password",
-            help="Leave empty to use automatic server key or free offline mode."
-        )
+        model_choice = default_models.get(provider_choice, "default")
 
     api_key_input = custom_key_input.strip() if custom_key_input.strip() else auto_key
 
@@ -900,6 +913,8 @@ if chat_view_mode == "Corner Floating Chatbot (Recommended)":
     if st.session_state.chat_open:
         with st.container(key="corner_chatbot"):
             active_name = html.escape(str(st.session_state.current_file_name or "Ready"))
+            is_real_ai = (provider_choice != "Offline Demo (Mock)") and bool(api_key_input)
+            engine_badge = f"🟢 Real AI ({provider_choice})" if is_real_ai else "🟠 Offline Demo"
             col_ch1, col_ch2 = st.columns([5, 1])
             with col_ch1:
                 st.markdown(
@@ -912,7 +927,7 @@ if chat_view_mode == "Corner Floating Chatbot (Recommended)":
                             </div>
                             <div style="font-size:0.75rem; color:#64748B; display:flex; align-items:center; gap:6px; margin-top:2px;">
                                 <span class="pulsing-green-dot"></span>
-                                <span>Active • <b>{active_name}</b></span>
+                                <span>{engine_badge} • <b>{active_name}</b></span>
                             </div>
                         </div>
                     </div>

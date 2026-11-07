@@ -36,7 +36,7 @@ def _resolve_secret(key_name: str, default: str = "") -> str:
 
 # Single source of truth for the default Gemini model.
 # Override with the GEMINI_MODEL environment variable if needed.
-DEFAULT_GEMINI_MODEL = os.getenv("GEMINI_MODEL", "gemini-3.8-flash")
+DEFAULT_GEMINI_MODEL = os.getenv("GEMINI_MODEL", "gemini-2.5-flash")
 FALLBACK_GEMINI_MODEL = os.getenv("GEMINI_FALLBACK_MODEL", "gemini-2.5-flash")
 
 MODEL_NOT_FOUND_KEYWORDS = [
